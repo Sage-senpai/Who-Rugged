@@ -1,0 +1,164 @@
+/* Local mock of the GameEngine seam.
+   This is Layer 1: the full loop runs client side so the game is playable and
+   verifiable now. Each method is annotated with the 0G call that replaces it.
+   The async signatures and tiny delays mirror real network latency so the
+   "sealing" and reveal states are real states, not cosmetic.
+
+   Privacy is a mechanic: the suspicion read and tell are derived from a noisy
+   score, never from the true role, exactly as probe.ts must behave on Compute. */
+import type {
+  GameCase,
+  GameEngine,
+  LedgerRow,
+  PlayerProfile,
+  ProbeResult,
+  RoleType,
+  Suspect,
+  Verdict,
+} from '../lib/types'
+import { PROFESSIONS, HANDLES, STATEMENTS, TELLS } from './data'
+import { attestation, clamp, delay, hex, pick, shuffle } from '../lib/rng'
+
+const PROBES_PER_CASE = 2
+
+/** Base suspicion centre per role. Thief and baiter both read hot, which is
+ *  the whole point: a high meter is not proof. */
+function baseTell(role: RoleType): number {
+  if (role === 'thief') return 64
+  if (role === 'baiter') return 58
+  return 26
+}
+
+function tellNote(read: number): string {
+  if (read >= 60) return pick(TELLS.high)
+  if (read >= 38) return pick(TELLS.mid)
+  return pick(TELLS.low)
+}
+
+export const mockEngine: GameEngine = {
+  async openCase(caseNo: number): Promise<GameCase> {
+    // 0G: Vault.openCase(id, stolen) + sealRoles(caseId, agentIds) + agentSpeak()
+    await delay(420) // stands in for sealing roles inside the TEE
+
+    const pool = 900 + Math.floor(Math.random() * 5) * 50
+    const stolen = 250 + Math.floor(Math.random() * 5) * 50
+    const bond = 150 + Math.floor(Math.random() * 3) * 50
+
+    const jobs = shuffle(PROFESSIONS).slice(0, 5)
+    const handles = shuffle(HANDLES).slice(0, 5)
+
+    const thiefIdx = Math.floor(Math.random() * 5)
+    let baiterIdx: number
+    do {
+      baiterIdx = Math.floor(Math.random() * 5)
+    } while (baiterIdx === thiefIdx)
+
+    const suspects: Suspect[] = jobs.map((profession, i) => {
+      const role: RoleType = i === thiefIdx ? 'thief' : i === baiterIdx ? 'baiter' : 'innocent'
+      return {
+        id: `s${caseNo}_${i}`,
+        handle: handles[i],
+        profession,
+        statement: pick(STATEMENTS[role]),
+        attestation: attestation(),
+        read: null,
+        tell: null,
+        role,
+        isThief: i === thiefIdx,
+      }
+    })
+
+    return {
+      caseId: caseNo,
+      pool,
+      stolen,
+      bond,
+      suspects,
+      probesAllowed: PROBES_PER_CASE,
+      probesUsed: 0,
+      status: 'open',
+      accusedId: null,
+    }
+  },
+
+  async probe(gameCase: GameCase, suspectId: string): Promise<ProbeResult> {
+    // 0G: probe.ts -> one Compute call returning a NOISY 0..100 score + TEE receipt
+    await delay(320)
+
+    const suspect = gameCase.suspects.find((s) => s.id === suspectId)
+    if (!suspect) throw new Error('Unknown suspect')
+
+    const noisy = baseTell(suspect.role) + (Math.random() * 16 - 8)
+    const read = clamp(Math.round(noisy), 5, 95)
+
+    return {
+      suspectId,
+      read,
+      tell: tellNote(read),
+      attestation: attestation(),
+    }
+  },
+
+  async resolve(gameCase: GameCase, accusedId: string, player: PlayerProfile): Promise<Verdict> {
+    // 0G: verifyReveal(caseId) -> Vault.resolve(id, correct, accused, damages) -> saveReplay(case)
+    await delay(260)
+
+    const accused = gameCase.suspects.find((s) => s.id === accusedId)
+    if (!accused) throw new Error('Unknown suspect')
+
+    const reveal = gameCase.suspects.map((s) => ({
+      suspectId: s.id,
+      isThief: s.isThief,
+      attestation: s.attestation,
+    }))
+    const replayCid = '0x' + hex(56)
+
+    let kind: Verdict['kind']
+    let title: string
+    let subtitle: string
+    let rows: LedgerRow[]
+    let delta: number
+    let eloDelta: number
+
+    if (accused.isThief) {
+      const bounty = 100 + Math.floor(Math.random() * 5) * 20
+      delta = gameCase.stolen + bounty
+      eloDelta = 22 + Math.floor(Math.random() * 8)
+      kind = 'win'
+      title = 'Conviction Secured'
+      subtitle = 'Thief identified, vault recovered'
+      rows = [
+        { label: 'Vault recovered', amount: `+${gameCase.stolen} $GG`, sign: 'pos' },
+        { label: 'State bounty', amount: `+${bounty} $GG`, sign: 'pos' },
+        { label: 'Net', amount: `+${delta} $GG`, sign: 'pos' },
+      ]
+    } else if (accused.role === 'baiter') {
+      const damages = gameCase.bond + 120 + Math.floor(Math.random() * 5) * 20
+      delta = -damages
+      eloDelta = -(28 + Math.floor(Math.random() * 8))
+      kind = 'lose'
+      title = 'You Got Baited'
+      subtitle = 'Wrongful bust, the innocent had a lawyer waiting'
+      rows = [
+        { label: 'Bond forfeited', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
+        { label: 'Lawsuit damages', amount: `-${damages - gameCase.bond} $GG`, sign: 'neg' },
+        { label: 'Thief escaped with', amount: `-${gameCase.stolen} $GG`, sign: 'neg' },
+        { label: 'Net', amount: `-${damages} $GG`, sign: 'neg' },
+      ]
+    } else {
+      delta = -gameCase.bond
+      eloDelta = -(18 + Math.floor(Math.random() * 6))
+      kind = 'lose'
+      title = 'Wrongful Bust'
+      subtitle = 'Innocent suspect, the thief is still loose'
+      rows = [
+        { label: 'Bond forfeited', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
+        { label: 'Thief escaped with', amount: `-${gameCase.stolen} $GG`, sign: 'neg' },
+        { label: 'Net', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
+      ]
+    }
+
+    void player // reserved for memory-aware scoring once 0G Storage is wired
+    return { kind, title, subtitle, rows, delta, eloDelta, replayCid, reveal }
+  },
+}

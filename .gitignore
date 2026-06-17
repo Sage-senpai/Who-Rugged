@@ -1,0 +1,51 @@
+# dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# build output
+dist/
+dist-ssr/
+build/
+*.local
+
+# 0G agent skills (cloned in, not vendored)
+.0g-skills/
+
+# secrets and environment
+.env
+.env.*
+!.env.example
+
+# blockchain / hardhat / foundry artifacts
+contracts/artifacts/
+contracts/cache/
+contracts/out/
+contracts/typechain-types/
+broadcast/
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# vite / vitest
+.vite/
+coverage/
+
+# typescript incremental build cache
+*.tsbuildinfo

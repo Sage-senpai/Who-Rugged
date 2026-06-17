@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WHO RUGGED? · the game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Silkscreen:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* =================================================================
+     WHO RUGGED? game, arcade-cartridge skin, navy + sky-blue palette.
+     Suspect sprites: DiceBear "pixel-art" (CC0 1.0), seed-deterministic
+     so each handle always renders the same face. To re-skin: change the
+     seed/backgroundColor query params, self-host DiceBear, or swap in
+     CC0 packs (Kenney.nl, OpenGameArt). Color carries meaning:
+     sky = cop, gold = loot, alarm = thief/siren, lime = verified.
+     ================================================================= */
+  :root{
+    --void:#0C1626; --void-2:#10213B; --panel:#16294A; --panel-2:#1D3358;
+    --cream:#F5ECD6; --ink:#07101F;
+    --sky:#5BB0E8;        /* COP / brand */
+    --cyan:#5FE0E0;       /* scan / active pop */
+    --gold:#F4B740;       /* LOOT / score */
+    --alarm:#FF5277;      /* THIEF / siren */
+    --lime:#A7E05A;       /* VERIFIED */
+    --dim:#8FA6C4;
+    --pix:'Pixelify Sans',system-ui,sans-serif;
+    --tiny:'Silkscreen',monospace;
+    --mono:'Space Mono',monospace;
+    --sh:5px 5px 0 var(--ink); --sh-sm:3px 3px 0 var(--ink);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--void);color:var(--cream);font-family:var(--mono);
+    background-image:radial-gradient(120% 90% at 50% -20%, #14305a 0%, var(--void) 60%);
+    min-height:100vh}
+  .crt{position:fixed;inset:0;z-index:9;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.15) 2px 3px),
+      radial-gradient(130% 100% at 50% 50%, transparent 60%, rgba(0,0,0,.4) 100%);
+    mix-blend-mode:multiply;animation:flick 4s infinite steps(60)}
+  @keyframes flick{0%,97%{opacity:1}98%{opacity:.84}99%{opacity:.96}100%{opacity:1}}
+  ::selection{background:var(--alarm);color:var(--ink)}
+  .wrap{max-width:1020px;margin:0 auto;padding:0 20px}
+  .tiny{font-family:var(--tiny);font-size:10px;letter-spacing:1px;text-transform:uppercase}
+
+  /* HUD */
+  .hud{position:sticky;top:0;z-index:20;background:var(--ink);border-bottom:3px solid var(--sky);
+    font-family:var(--tiny);font-size:10px;letter-spacing:1px}
+  .hud .wrap{display:flex;gap:16px;align-items:center;padding:9px 20px;flex-wrap:wrap}
+  .hud .b{color:var(--sky)} .hud .b i{color:var(--cream);font-style:normal}
+  .hud .b.gold{color:var(--gold)} .hud .b.alarm{color:var(--alarm)} .hud .b.lime{color:var(--lime)}
+  .hud .coin{margin-left:auto;color:var(--gold);animation:blink 1.1s steps(2) infinite}
+  @keyframes blink{50%{opacity:.25}}
+
+  /* title row */
+  .titlebar{padding:26px 0 8px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  h1{font-family:var(--pix);font-weight:700;margin:0;font-size:clamp(30px,6vw,52px);line-height:.9;
+    color:var(--cream);text-shadow:4px 4px 0 var(--alarm),8px 8px 0 var(--sky)}
+  h1 .q{color:var(--gold)}
+  .titlebar .sub{font-family:var(--tiny);font-size:10px;color:var(--dim);letter-spacing:1px}
+
+  /* brief */
+  .brief{background:var(--void-2);border:3px solid var(--sky);box-shadow:var(--sh);padding:16px 18px;margin:14px 0 18px}
+  .brief .siren{font-family:var(--tiny);font-size:11px;color:var(--alarm);letter-spacing:1px;margin-bottom:8px;
+    display:inline-flex;gap:8px;align-items:center}
+  .brief .siren::before{content:"◉";animation:blink .8s steps(2) infinite}
+  .brief p{margin:0;font-size:14px;color:var(--cream)}
+  .brief b{color:var(--gold)}
+  .vault{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-family:var(--tiny);font-size:10px;color:var(--dim)}
+  .vault b{color:var(--cream)} .vault .lost b{color:var(--alarm)}
+
+  /* suspect grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:18px}
+  .card{position:relative;background:var(--panel);border:3px solid var(--panel-2);box-shadow:var(--sh);
+    padding:13px;transform:translateY(8px);opacity:0;animation:deal .45s ease forwards}
+  @keyframes deal{to{transform:none;opacity:1}}
+  .card .top{display:flex;gap:11px;align-items:center}
+  .mugwrap{position:relative;width:54px;height:54px;flex-shrink:0;border:3px solid var(--sky);
+    background:var(--panel-2);image-rendering:pixelated;overflow:hidden}
+  .mugwrap .fb{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--pix);
+    font-size:24px;color:var(--sky)}
+  .mugwrap img{position:relative;width:100%;height:100%;display:block;image-rendering:pixelated}
+  .who .nm{font-family:var(--tiny);font-size:10px;color:var(--sky);letter-spacing:.5px}
+  .who .jb{font-family:var(--tiny);font-size:8px;color:var(--dim);margin-top:4px}
+  .stmt{margin-top:11px;font-family:var(--mono);font-size:12px;color:var(--cream);
+    background:var(--void-2);border-left:3px solid var(--sky);padding:8px 9px;min-height:46px}
+  .meter-lab{display:flex;justify-content:space-between;font-family:var(--tiny);font-size:8px;color:var(--dim);margin:11px 0 4px}
+  .meter{height:12px;background:var(--void-2);border:2px solid var(--panel-2);position:relative;overflow:hidden}
+  .meter i{position:absolute;left:0;top:0;bottom:0;width:0;transition:width .6s ease;
+    background:linear-gradient(90deg,var(--sky),var(--gold),var(--alarm))}
+  .meter.unread i{background:var(--panel-2)}
+  .btns{display:flex;gap:8px;margin-top:12px}
+  .btn{flex:1;font-family:var(--tiny);font-size:9px;letter-spacing:.5px;text-transform:uppercase;
+    padding:10px 6px;border:3px solid var(--ink);cursor:pointer;box-shadow:var(--sh-sm);
+    transition:transform .07s,box-shadow .07s}
+  .btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
+  .btn:focus-visible{outline:3px solid var(--lime);outline-offset:2px}
+  .btn.scan{background:var(--sky);color:var(--ink)}
+  .btn.accuse{background:var(--alarm);color:var(--ink)}
+  .btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;transform:none}
+
+  /* seal + reveal */
+  .seal{position:absolute;top:9px;right:9px;font-family:var(--tiny);font-size:8px;letter-spacing:1px;
+    background:var(--alarm);color:var(--ink);padding:3px 6px;border:2px solid var(--ink);transform:rotate(4deg)}
+  .reveal{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+  .reveal .mk{font-family:var(--pix);font-weight:700;font-size:30px;border:3px solid currentColor;
+    padding:5px 14px;transform:rotate(-8deg) scale(1.4);opacity:0;animation:slam .4s ease forwards}
+  @keyframes slam{0%{opacity:0;transform:rotate(-8deg) scale(2.2)}70%{opacity:1;transform:rotate(-8deg) scale(1.25)}100%{opacity:.95;transform:rotate(-8deg) scale(1.4)}}
+  .mk.thief{color:var(--alarm)} .mk.clear{color:var(--lime)}
+  .card.is-thief{border-color:var(--alarm)}
+  .attest{margin-top:8px;font-family:var(--mono);font-size:8px;color:var(--dim);word-break:break-all;
+    border-top:2px dashed var(--panel-2);padding-top:6px}
+  .attest b{color:var(--lime)}
+
+  /* action bar */
+  .bar{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+    background:var(--void-2);border:3px solid var(--panel-2);padding:14px 16px}
+  .bar .note{font-family:var(--mono);font-size:11.5px;color:var(--dim);max-width:560px}
+  .bar .note b{color:var(--gold)}
+  .bigbtn{font-family:var(--tiny);font-size:11px;letter-spacing:1px;text-transform:uppercase;
+    padding:13px 20px;border:3px solid var(--ink);background:var(--gold);color:var(--ink);cursor:pointer;box-shadow:var(--sh)}
+  .bigbtn:active{transform:translate(5px,5px);box-shadow:0 0 0 var(--ink)}
+
+  .foot{text-align:center;font-family:var(--tiny);font-size:9px;color:var(--dim);padding:22px 0;letter-spacing:1px}
+  .foot b{color:var(--sky)}
+
+  /* verdict modal */
+  .ov{position:fixed;inset:0;background:rgba(7,16,31,.82);display:none;place-items:center;z-index:40;padding:18px}
+  .ov.on{display:grid}
+  .verdict{background:var(--void-2);border:3px solid var(--gold);box-shadow:var(--sh);max-width:480px;width:100%;padding:24px}
+  .verdict.win{border-color:var(--lime)} .verdict.lose{border-color:var(--alarm)}
+  .verdict h2{font-family:var(--pix);font-weight:700;font-size:28px;margin:0 0 4px}
+  .verdict.win h2{color:var(--lime)} .verdict.lose h2{color:var(--alarm)}
+  .verdict .vs{font-family:var(--tiny);font-size:9px;letter-spacing:1px;color:var(--dim);margin-bottom:16px;text-transform:uppercase}
+  .ledger{font-family:var(--mono);font-size:12.5px;border:2px solid var(--panel-2);margin-bottom:14px}
+  .ledger .r{display:flex;justify-content:space-between;padding:8px 11px;border-bottom:2px solid var(--panel)}
+  .ledger .r:last-child{border-bottom:0;background:var(--panel);font-weight:700}
+  .ledger .pos{color:var(--lime)} .ledger .neg{color:var(--alarm)}
+  .proof{font-family:var(--mono);font-size:9px;color:var(--dim);word-break:break-all;margin-bottom:16px;line-height:1.6}
+  .proof b{color:var(--lime)}
+  .verdict .bigbtn{width:100%;text-align:center}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="crt" aria-hidden="true"></div>
+
+<div class="hud"><div class="wrap">
+  <span class="b gold">SCORE <i id="balance">1,000</i></span>
+  <span class="b">RANK <i id="elo">1000</i></span>
+  <span class="b lime">SOLVED <i id="record">0/0</i></span>
+  <span class="coin">◉ INSERT COIN</span>
+</div></div>
+
+<div class="wrap">
+  <div class="titlebar">
+    <h1>WHO RUGGED<span class="q">?</span></h1>
+    <div class="sub">CASE <span id="caseNo">#0001</span> · PRECINCT 0G</div>
+  </div>
+
+  <div class="brief">
+    <div class="siren">VAULT DRAINED OVERNIGHT</div>
+    <p id="briefText">Five suspects sat at the table. One is the <b>Thief</b>. Read their statements, spend your scans, and make the bust. Get it wrong and the accused sues you and the thief walks.</p>
+    <div class="vault">
+      <span>POOL <b id="vaultPool">1,000 $GG</b></span>
+      <span class="lost">DRAINED <b id="vaultLost">-350 $GG</b></span>
+      <span>SCANS LEFT <b id="probes">2</b></span>
+      <span>BOND AT RISK <b id="bond">200 $GG</b></span>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="bar">
+    <div class="note" id="note">An innocent can act guilty on purpose to bait a wrongful bust and farm the lawsuit. A high meter is not proof.</div>
+    <button class="bigbtn" id="newCase">New Case</button>
+  </div>
+
+  <div class="foot">SPRITES: DICEBEAR PIXEL-ART (CC0) · ROLES <b>SEALED ON 0G COMPUTE</b> · POT ON <b>0G CHAIN</b> · REPLAYS ON <b>0G STORAGE</b></div>
+</div>
+
+<div class="ov" id="ov"><div class="verdict" id="verdict">
+  <h2 id="vTitle">Verdict</h2>
+  <div class="vs" id="vSub"></div>
+  <div class="ledger" id="vLedger"></div>
+  <div class="proof" id="vProof"></div>
+  <button class="bigbtn" id="cont">Continue ▶</button>
+</div></div>
+
+<script>
+const PROFS=["Doctor","Lawyer","Technician","DevRel","Community","Auditor","Validator"];
+const HANDLES=["0xMaya","NodeRunner","priya.eth","Sasha_K","glitch","mevMike","quietQ","ledgerLou","daoRen","vbyKai"];
+const SAY={
+  innocent:[
+    "I was reconciling the multisig logs when it drained. Timestamps clear me.",
+    "Ask the validator, we were both on the call until 2am.",
+    "I don't even have signer access. Pull the permission set.",
+    "My wallet's been cold all week. Check the chain.",
+    "I just want my cut back. Catch whoever did this."
+  ],
+  thief:[
+    "It was the Technician. They had vault access all night.",
+    "Why look at me? I'm the one who reported the drain.",
+    "I'd never risk my reputation here. Not who I am.",
+    "The timestamps are forged. Someone's framing me.",
+    "I was asleep. Do I look like a thief to you?"
+  ],
+  baiter:[
+    "Don't pull my wallet history. Or do. Maybe I want you to.",
+    "Arrest me. I dare you. My lawyer's on retainer.",
+    "Sure, I was near the vault. Whatcha gonna do?",
+    "Guilty until proven innocent, right? Take your shot.",
+    "I love a good courtroom. Accuse me and find out."
+  ]
+};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1]);
+const hex=n=>Array.from({length:n},()=>"0123456789abcdef"[Math.floor(Math.random()*16)]).join("");
+
+const P={balance:1000,elo:1000,played:0,wins:0,case:1};
+let agents=[],probes=2,resolved=false,STOLEN=0,BOND=200,POOL=1000;
+
+function unlock(){ if(P.elo>=1400)return"UNLOCKED: Two Thieves"; if(P.elo>=1200)return"UNLOCKED: Undercover Cops"; return"Reach RANK 1200 to unlock Undercover Cops"; }
+
+function newCase(){
+  resolved=false;
+  POOL=900+Math.floor(Math.random()*5)*50;
+  STOLEN=250+Math.floor(Math.random()*5)*50;
+  BOND=150+Math.floor(Math.random()*3)*50;
+  probes=2;
+  const jobs=shuffle(PROFS).slice(0,5), names=shuffle(HANDLES).slice(0,5);
+  const t=Math.floor(Math.random()*5); let bI; do{bI=Math.floor(Math.random()*5);}while(bI===t);
+  agents=jobs.map((job,i)=>{
+    const type=i===t?"thief":(i===bI?"baiter":"innocent");
+    const base=type==="thief"?64:type==="baiter"?58:26;
+    return{name:names[i],job,type,isThief:i===t,tell:base+(Math.random()*22-11),
+      statement:pick(SAY[type]),read:null,attest:"0x"+hex(40)};
+  });
+  document.getElementById("caseNo").textContent="#"+String(P.case).padStart(4,"0");
+  document.getElementById("vaultPool").textContent=POOL.toLocaleString()+" $GG";
+  document.getElementById("vaultLost").textContent="-"+STOLEN+" $GG";
+  document.getElementById("bond").textContent=BOND+" $GG";
+  document.getElementById("note").innerHTML="An innocent can act guilty on purpose to bait a wrongful bust and farm the lawsuit. A high meter is not proof. <b>"+unlock()+"</b>";
+  render(); hud();
+}
+function hud(){
+  document.getElementById("balance").textContent=P.balance.toLocaleString();
+  document.getElementById("elo").textContent=P.elo;
+  document.getElementById("record").textContent=P.wins+"/"+P.played;
+  document.getElementById("probes").textContent=probes;
+}
+function sprite(seed){
+  return "https://api.dicebear.com/10.x/pixel-art/svg?seed="+encodeURIComponent(seed)+"&backgroundColor=16294a&radius=0";
+}
+function render(){
+  const g=document.getElementById("grid"); g.innerHTML="";
+  agents.forEach((a,i)=>{
+    const init=a.name.replace(/[^a-zA-Z]/g,"").slice(0,1).toUpperCase()||"?";
+    const pct=a.read===null?0:Math.max(5,Math.min(95,Math.round(a.read)));
+    const c=document.createElement("div");
+    c.className="card"; c.style.animationDelay=(i*60)+"ms";
+    c.innerHTML=`
+      <div class="seal">SEALED · TEE</div>
+      <div class="top">
+        <div class="mugwrap"><span class="fb">${init}</span>
+          <img alt="" src="${sprite(a.name)}" onerror="this.style.display='none'"></div>
+        <div class="who"><div class="nm">${a.name}</div><div class="jb">${a.job}</div></div>
+      </div>
+      <div class="stmt">${a.statement}</div>
+      <div class="meter-lab"><span>SUSPICION READ</span><span>${a.read===null?'SEALED':pct+'%'}</span></div>
+      <div class="meter ${a.read===null?'unread':''}"><i style="width:${a.read===null?100:pct}%"></i></div>
+      <div class="btns">
+        <button class="btn scan" data-i="${i}" ${a.read!==null||resolved?'disabled':''}>Scan</button>
+        <button class="btn accuse" data-a="${i}" ${resolved?'disabled':''}>Accuse</button>
+      </div>`;
+    g.appendChild(c);
+  });
+  g.querySelectorAll(".scan").forEach(b=>b.onclick=()=>scan(+b.dataset.i));
+  g.querySelectorAll(".accuse").forEach(b=>b.onclick=()=>accuse(+b.dataset.a));
+}
+function scan(i){
+  if(probes<=0||agents[i].read!==null||resolved)return;
+  probes--; agents[i].read=Math.max(5,Math.min(95,agents[i].tell+(Math.random()*16-8)));
+  hud(); render();
+  if(probes===0) document.getElementById("note").innerHTML="No scans left. The reads are <b>TEE-attested</b>, provably not faked, but suspicion is not proof. Make the call.";
+}
+function accuse(i){
+  if(resolved)return; resolved=true; const a=agents[i]; P.played++;
+  let title,sub,kind,rows,delta;
+  if(a.isThief){
+    const bounty=100+Math.floor(Math.random()*5)*20; delta=STOLEN+bounty;
+    P.balance+=delta; P.wins++; P.elo+=22+Math.floor(Math.random()*8);
+    title="Conviction Secured"; kind="win"; sub="Thief identified, vault recovered";
+    rows=[["Vault recovered","+"+STOLEN+" $GG","pos"],["State bounty","+"+bounty+" $GG","pos"],["Net","+"+delta+" $GG","pos"]];
+  }else if(a.type==="baiter"){
+    const dmg=BOND+120+Math.floor(Math.random()*5)*20; delta=-dmg;
+    P.balance+=delta; P.elo-=28+Math.floor(Math.random()*8);
+    title="You Got Baited"; kind="lose"; sub="Wrongful bust, the innocent had a lawyer waiting";
+    rows=[["Bond forfeited","-"+BOND+" $GG","neg"],["Lawsuit damages","-"+(dmg-BOND)+" $GG","neg"],["Thief escaped with","-"+STOLEN+" $GG","neg"],["Net","-"+dmg+" $GG","neg"]];
+  }else{
+    delta=-BOND; P.balance+=delta; P.elo-=18+Math.floor(Math.random()*6);
+    title="Wrongful Bust"; kind="lose"; sub="Innocent suspect, the thief is still loose";
+    rows=[["Bond forfeited","-"+BOND+" $GG","neg"],["Thief escaped with","-"+STOLEN+" $GG","neg"],["Net","-"+BOND+" $GG","neg"]];
+  }
+  P.elo=Math.max(800,P.elo); hud(); breakSeals(); modal(title,sub,kind,rows);
+}
+function breakSeals(){
+  document.querySelectorAll(".card").forEach((c,i)=>{
+    const a=agents[i]; if(a.isThief)c.classList.add("is-thief");
+    const s=c.querySelector(".seal"); if(s)s.remove();
+    const r=document.createElement("div"); r.className="reveal";
+    r.innerHTML=`<div class="mk ${a.isThief?'thief':'clear'}">${a.isThief?'THIEF':'CLEAR'}</div>`;
+    r.firstElementChild.style.animationDelay=(i*80)+"ms"; c.appendChild(r);
+    const at=document.createElement("div"); at.className="attest";
+    at.innerHTML=`<b>verified</b> 0G TEE ${a.attest}`; c.appendChild(at);
+  });
+}
+function modal(title,sub,kind,rows){
+  const v=document.getElementById("verdict"); v.className="verdict "+kind;
+  document.getElementById("vTitle").textContent=title;
+  document.getElementById("vSub").textContent=sub;
+  document.getElementById("vLedger").innerHTML=rows.map(r=>`<div class="r"><span>${r[0]}</span><span class="${r[2]}">${r[1]}</span></div>`).join("");
+  document.getElementById("vProof").innerHTML=`<b>VERIFIABLE REPLAY</b> 0x${hex(56)}<br>Recorded on 0G Storage, roles sealed by 0G Compute, settled on 0G Chain. Nobody could see or alter who the thief was.`;
+  setTimeout(()=>document.getElementById("ov").classList.add("on"),650);
+}
+document.getElementById("cont").onclick=()=>{document.getElementById("ov").classList.remove("on");P.case++;newCase();};
+document.getElementById("newCase").onclick=()=>{if(!resolved)P.case++;newCase();};
+newCase();
+</script>
+</body>
+</html>
