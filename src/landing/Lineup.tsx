@@ -70,9 +70,7 @@ export function Lineup() {
           One of them rugged the vault. Make a call. <b>The reveal is verifiable.</b>
         </p>
       ) : (
-        <p className="hint reset" role="button" tabIndex={0} onClick={reset} onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); reset() }
-        }}>
+        <button type="button" className="hint reset" onClick={reset}>
           {correct ? (
             <>
               You got them. <b>Verified on-chain</b>, no trust required. Tap to run it back.
@@ -83,7 +81,7 @@ export function Lineup() {
               reset.
             </>
           )}
-        </p>
+        </button>
       )}
     </div>
   )

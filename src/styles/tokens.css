@@ -252,6 +252,36 @@ img {
   left: 8px;
 }
 
+/* route chunk fallback */
+.route-fallback {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--s3);
+  font-family: var(--tiny);
+  letter-spacing: 2px;
+  color: var(--gold);
+}
+.route-fallback .rf-coin {
+  font-size: 38px;
+  animation: blink 0.8s steps(2) infinite;
+}
+.route-fallback .rf-text {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+/* Touch devices get full-size tap targets (WCAG 2.5.5, 44px) without
+   inflating the compact arcade buttons on mouse and keyboard. */
+@media (pointer: coarse) {
+  .btn,
+  .bigbtn,
+  .gbtn {
+    min-height: 44px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

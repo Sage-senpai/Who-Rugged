@@ -14,6 +14,20 @@ Planned, in build order. See `MASTER_BUILD_PROMPT.md`.
 - Rank ladder with Undercover Cop unlock at 1200, then Two Thieves at 1400.
 - Courtroom mini-screen on a wrong bust, where the Lawyer profession boosts damages.
 
+## [0.4.1] - 2026-06-17
+
+Polish pass over Layer 1. Responsiveness, performance, and accessibility raised without touching the arcade identity.
+
+### Added
+- Route-level code splitting. The landing no longer ships the game engine or the DiceBear sprite library; the game chunk loads on demand at `/play`. A themed "INSERT COIN" fallback covers the load.
+- Open Graph and Twitter share tags and an inline pixel favicon (gold question mark on navy), since shareable replays are part of the hook.
+
+### Changed
+- Full responsive pass down to 320px: trimmed the oversized logo hard-shadow on narrow phones so it never clips, tightened HUD wrapping, stacked the action bar, and kept the five-wide police lineup legible on the smallest screens.
+- Touch devices now get 44px minimum tap targets on every button (WCAG 2.5.5), while mouse and keyboard keep the compact arcade sizing.
+- Suspect cards gain a cop-blue border and a deeper hard shadow on hover, using box-shadow rather than transform so the deal-in animation does not cancel it.
+- The hero lineup reset is now a real button instead of a div with a button role, so it is reachable and operable by keyboard and screen readers.
+
 ## [0.4.0] - 2026-06-17
 
 Layer 1. The blueprint became a real app. The two blueprint HTML files moved to `blueprints/` as the design contract, and the playable game plus the marketing site were ported to a React + Vite + TypeScript build with the identity intact.

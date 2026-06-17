@@ -122,6 +122,14 @@
 }
 .game-view .card.is-thief { border-color: var(--alarm); }
 .game-view .card.is-accused { outline: 3px solid var(--gold); outline-offset: 2px; }
+/* a suspect under interrogation reads as live: cop-blue border + a deeper
+   hard shadow. Avoids animating transform, which the deal-in keyframe pins
+   via fill-forwards. Disabled with all motion under reduced-motion. */
+.game-view .card { transition: border-color 0.1s ease, box-shadow 0.1s ease; }
+.game-view .card:not(.is-thief):not(.is-accused):hover {
+  border-color: var(--sky);
+  box-shadow: 7px 7px 0 var(--ink);
+}
 
 .game-view .card .top { display: flex; gap: 11px; align-items: center; }
 .game-view .mugwrap {
@@ -423,4 +431,9 @@
 
 @media (max-width: 520px) {
   .game-view .grid { grid-template-columns: 1fr; }
+  .game-view h1 { text-shadow: 3px 3px 0 var(--alarm), 6px 6px 0 var(--sky); }
+  .game-view .hud .wrap { gap: 10px 14px; padding: 9px 16px; }
+  .game-view .titlebar { padding: 20px 0 6px; }
+  .game-view .bar { flex-direction: column; align-items: stretch; }
+  .game-view .bar .bigbtn { width: 100%; }
 }

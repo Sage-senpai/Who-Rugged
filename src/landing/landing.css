@@ -189,7 +189,18 @@
   text-align: center;
 }
 .landing-view .hint b { color: var(--gold); }
-.landing-view .hint.reset { cursor: pointer; }
+.landing-view button.hint.reset {
+  display: block;
+  width: 100%;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+}
+.landing-view button.hint.reset:focus-visible { outline: 3px solid var(--lime); outline-offset: 3px; }
 
 /* SECTION SHELL */
 .landing-view section {
@@ -396,4 +407,21 @@
   .landing-view .steps,
   .landing-view .chips,
   .landing-view .kit-grid { grid-template-columns: 1fr; }
+
+  .landing-view header { padding: 34px 0 22px; }
+  .landing-view section { padding: 34px 0; }
+  /* trim the hard-shadow offsets so the oversized logo never gets clipped
+     against the viewport edge on narrow phones */
+  .landing-view h1.logo { text-shadow: 4px 4px 0 var(--alarm), 8px 8px 0 var(--sky); }
+  .landing-view .hud .wrap { gap: 10px 14px; }
+  .landing-view .twist { padding: 18px; }
+  .landing-view .flow { font-size: 9px; }
+}
+
+@media (max-width: 360px) {
+  /* keep the five-wide lineup readable on the smallest phones */
+  .landing-view .wall { gap: 5px; }
+  .landing-view .susp { padding: 7px 3px 6px; }
+  .landing-view .susp .mug { font-size: 18px; padding: 6px 0; }
+  .landing-view .susp .nm { font-size: 7px; }
 }
