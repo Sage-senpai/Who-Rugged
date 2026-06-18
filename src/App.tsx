@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { Crt } from './components/Crt'
 import { RouteFallback } from './components/RouteFallback'
+import { MusicDirector } from './components/MusicDirector'
 import { SettingsProvider } from './settings/SettingsContext'
 
 // Route-level code splitting: the landing no longer ships the game engine and
@@ -20,6 +21,7 @@ export default function App() {
         Skip to content
       </a>
       <Crt />
+      <MusicDirector />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<Landing />} />

@@ -2,7 +2,7 @@
    zero audio assets and dodges licensing. Blips only. Off by default until a
    user gesture, and fully gated by the Settings "sound" toggle. */
 
-type Sound = 'select' | 'scan' | 'seal' | 'win' | 'lose'
+type Sound = 'select' | 'back' | 'toggle' | 'scan' | 'seal' | 'win' | 'lose'
 
 let ctx: AudioContext | null = null
 let enabled = true
@@ -50,20 +50,30 @@ export const sfx = {
     if (!enabled) return
     switch (sound) {
       case 'select':
-        blip(660, 0.07, 'square')
+        blip(660, 0.06, 'square')
+        blip(990, 0.07, 'square', 0.045)
+        break
+      case 'back':
+        blip(520, 0.06, 'square')
+        blip(390, 0.08, 'square', 0.045)
+        break
+      case 'toggle':
+        blip(740, 0.05, 'square', 0, 0.05)
         break
       case 'scan':
         blip(880, 0.05, 'square')
-        blip(1180, 0.08, 'square', 0.05)
+        blip(1180, 0.06, 'square', 0.05)
+        blip(1560, 0.08, 'square', 0.1)
         break
       case 'seal':
-        blip(220, 0.12, 'sawtooth', 0, 0.07)
+        blip(240, 0.14, 'sawtooth', 0, 0.08)
+        blip(120, 0.18, 'square', 0.02, 0.07)
         break
       case 'win':
-        chord([523, 659, 784, 1046], 0.09, 0.18, 'square')
+        chord([523, 659, 784, 1046], 0.085, 0.18, 'square')
         break
       case 'lose':
-        chord([392, 311, 233], 0.11, 0.2, 'sawtooth')
+        chord([392, 311, 233, 196], 0.1, 0.22, 'sawtooth')
         break
     }
   },

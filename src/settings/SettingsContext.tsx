@@ -4,11 +4,13 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { sfx } from '../lib/sfx'
+import { music } from '../lib/music'
 
 export interface Settings {
   scanlines: boolean
   flicker: boolean
   sound: boolean
+  music: boolean
   reduceMotion: boolean
 }
 
@@ -16,6 +18,7 @@ const DEFAULTS: Settings = {
   scanlines: true,
   flicker: true,
   sound: true,
+  music: true,
   reduceMotion: false,
 }
 
@@ -52,6 +55,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     root.classList.toggle('no-flicker', !settings.flicker)
     root.classList.toggle('force-reduce', settings.reduceMotion)
     sfx.setEnabled(settings.sound)
+    music.setEnabled(settings.music)
   }, [settings])
 
   const value = useMemo<Ctx>(

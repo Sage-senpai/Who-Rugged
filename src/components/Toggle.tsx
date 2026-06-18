@@ -1,3 +1,5 @@
+import { sfx } from '../lib/sfx'
+
 /* Accessible on/off switch in the arcade style. Used by Settings and the
    in-game pause panel. Renders a real switch role with keyboard support. */
 interface Props {
@@ -14,7 +16,10 @@ export function Toggle({ label, hint, checked, onChange }: Props) {
       role="switch"
       aria-checked={checked}
       className={`toggle ${checked ? 'on' : 'off'}`}
-      onClick={() => onChange(!checked)}
+      onClick={() => {
+        sfx.play('toggle')
+        onChange(!checked)
+      }}
     >
       <span className="toggle-text">
         <span className="toggle-label">{label}</span>

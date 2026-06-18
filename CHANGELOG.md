@@ -14,6 +14,22 @@ Planned, in build order. See `MASTER_BUILD_PROMPT.md`.
 - Rank ladder with Undercover Cop unlock at 1200, then Two Thieves at 1400.
 - Courtroom mini-screen on a wrong bust, where the Lawyer profession boosts damages.
 
+## [0.7.0] - 2026-06-18
+
+Sound. A chiptune music engine with a unique theme per screen, plus richer effects.
+
+### Added
+- A Web Audio chiptune music engine (`src/lib/music.ts`): a step sequencer with bass, lead, hat, and kick voices, fade in and out, and gapless looping. Zero audio assets, no licensing, in keeping with the arcade identity.
+- A distinct looping theme per area: an attract loop on the landing, a calmer menu theme, an ambient settings pad, a brighter stats theme, a lighter how-to theme, and a tense, driving gameplay loop. The track follows the route and crossfades on navigation.
+- A Music toggle in Settings and in the in-game pause panel, separate from sound effects. Both persist on the device.
+- Richer sound effects with fuller envelopes, and new blips for menu navigation, back, and toggles.
+
+### Changed
+- Audio respects the browser autoplay rules: music starts on the first pointer or key, never before.
+
+### Notes
+- These themes are synthesized chiptunes, not licensed recordings. The engine has a clear seam to swap in CC-licensed audio files later if desired.
+
 ## [0.6.0] - 2026-06-18
 
 Game feel. First-run onboarding, the courtroom mini-screen, keyboard shortcuts, and more sound.

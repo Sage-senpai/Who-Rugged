@@ -39,6 +39,7 @@ export function PauseOverlay({ onResume }: Props) {
       <div className="pause-card" role="dialog" aria-modal="true" aria-label="Paused">
         <h2>Paused</h2>
 
+        <Toggle label="Music" checked={settings.music} onChange={(v) => set('music', v)} />
         <Toggle label="Sound effects" checked={settings.sound} onChange={(v) => set('sound', v)} />
         <Toggle label="CRT scanlines" checked={settings.scanlines} onChange={(v) => set('scanlines', v)} />
         <Toggle label="Reduce motion" checked={settings.reduceMotion} onChange={(v) => set('reduceMotion', v)} />

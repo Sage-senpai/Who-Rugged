@@ -43,6 +43,12 @@ export function Settings() {
       <section className="panel">
         <h2 className="panel-h">Audio</h2>
         <Toggle
+          label="Music"
+          hint="Chiptune theme, a different loop per screen."
+          checked={settings.music}
+          onChange={(v) => set('music', v)}
+        />
+        <Toggle
           label="Sound effects"
           hint="Arcade blips on scan, reveal, and verdict."
           checked={settings.sound}
