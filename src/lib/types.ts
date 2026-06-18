@@ -126,4 +126,6 @@ export interface GameEngine {
   probe(gameCase: GameCase, suspectId: string): Promise<ProbeResult>
   /** verifyReveal() + Vault.resolve() + saveReplay() in production. */
   resolve(gameCase: GameCase, accusedId: string, player: PlayerProfile): Promise<Verdict>
+  /** The clock ran out with no accusation: bond forfeited, thief escapes. */
+  resolveTimeout(gameCase: GameCase, player: PlayerProfile): Promise<Verdict>
 }

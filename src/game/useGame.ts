@@ -5,13 +5,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Difficulty, GameCase, GameEngine, PlayerProfile, Verdict } from '../lib/types'
 import { mockEngine } from './mockEngine'
+import { DIFFICULTY } from './difficulty'
 import { ELO_FLOOR, loadPlayer, pushHistory, savePlayer } from './profile'
 import { sfx } from '../lib/sfx'
 
 export type GameStatus = 'sealing' | 'open' | 'resolving' | 'resolved' | 'error'
 export type Overlay = 'none' | 'courtroom' | 'verdict'
 
-export function useGame(engine: GameEngine = mockEngine, difficulty: Difficulty = 'detective') {
+export function useGame(
+  engine: GameEngine = mockEngine,
+  difficulty: Difficulty = 'detective',
+  frozen = false,
+) {
   const [player, setPlayer] = useState<PlayerProfile>(loadPlayer)
   // ref so changing difficulty applies to the next case, not the current one
   const diffRef = useRef(difficulty)
@@ -23,6 +28,7 @@ export function useGame(engine: GameEngine = mockEngine, difficulty: Difficulty 
   const [overlay, setOverlay] = useState<Overlay>('none')
   const [busyScanId, setBusyScanId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
 
   const modalTimer = useRef<number | null>(null)
 
@@ -34,9 +40,11 @@ export function useGame(engine: GameEngine = mockEngine, difficulty: Difficulty 
       setRevealed(false)
       setOverlay('none')
       setGameCase(null)
+      setSecondsLeft(null)
       try {
         const c = await engine.openCase(caseNo, diffRef.current)
         setGameCase(c)
+        setSecondsLeft(DIFFICULTY[diffRef.current].timeLimit)
         setStatus('open')
       } catch {
         setError('Could not seal the case. The enclave did not answer. Try again.')
@@ -44,6 +52,39 @@ export function useGame(engine: GameEngine = mockEngine, difficulty: Difficulty 
       }
     },
     [engine],
+  )
+
+  // settle a resolved case: reveal, score, record, then route to the overlay.
+  // useCourtroom is false for a timeout (there is no accused to put on trial).
+  const settle = useCallback(
+    (v: Verdict, caseId: number, useCourtroom: boolean) => {
+      setVerdict(v)
+      setRevealed(true)
+      setStatus('resolved')
+      sfx.play('seal')
+      const eloAfter = Math.max(ELO_FLOOR, player.elo + v.eloDelta)
+      setPlayer((p) => ({
+        ...p,
+        balance: p.balance + v.delta,
+        elo: Math.max(ELO_FLOOR, p.elo + v.eloDelta),
+        played: p.played + 1,
+        wins: p.wins + (v.kind === 'win' ? 1 : 0),
+      }))
+      pushHistory({
+        caseNo: caseId,
+        kind: v.kind,
+        title: v.title,
+        delta: v.delta,
+        eloAfter,
+        replayCid: v.replayCid,
+        at: Date.now(),
+      })
+      modalTimer.current = window.setTimeout(() => {
+        setOverlay(useCourtroom && v.kind === 'lose' ? 'courtroom' : 'verdict')
+        sfx.play(v.kind)
+      }, 720)
+    },
+    [player],
   )
 
   // first case on mount
@@ -100,41 +141,48 @@ export function useGame(engine: GameEngine = mockEngine, difficulty: Difficulty 
       try {
         const v = await engine.resolve(gameCase, suspectId, player)
         setGameCase((prev) => (prev ? { ...prev, status: 'resolved', accusedId: suspectId } : prev))
-        setVerdict(v)
-        setRevealed(true) // break the seals
-        setStatus('resolved')
-        sfx.play('seal')
-
-        const eloAfter = Math.max(ELO_FLOOR, player.elo + v.eloDelta)
-        setPlayer((p) => ({
-          ...p,
-          balance: p.balance + v.delta,
-          elo: Math.max(ELO_FLOOR, p.elo + v.eloDelta),
-          played: p.played + 1,
-          wins: p.wins + (v.kind === 'win' ? 1 : 0),
-        }))
-        pushHistory({
-          caseNo: gameCase.caseId,
-          kind: v.kind,
-          title: v.title,
-          delta: v.delta,
-          eloAfter,
-          replayCid: v.replayCid,
-          at: Date.now(),
-        })
-
-        modalTimer.current = window.setTimeout(() => {
-          // a wrong bust goes through the courtroom first, a win straight to the verdict
-          setOverlay(v.kind === 'lose' ? 'courtroom' : 'verdict')
-          sfx.play(v.kind)
-        }, 720)
+        settle(v, gameCase.caseId, true)
       } catch {
         setError('Settlement failed before payout. No funds moved. Try the accusation again.')
         setStatus('open')
       }
     },
-    [engine, gameCase, status, player],
+    [engine, gameCase, status, player, settle],
   )
+
+  const handleTimeout = useCallback(async () => {
+    if (!gameCase || status !== 'open') return
+    setStatus('resolving')
+    sfx.play('buzz')
+    try {
+      const v = await engine.resolveTimeout(gameCase, player)
+      setGameCase((prev) => (prev ? { ...prev, status: 'resolved' } : prev))
+      settle(v, gameCase.caseId, false) // no accused, skip the courtroom
+    } catch {
+      setError('Settlement failed at the buzzer. Try a new case.')
+      setStatus('open')
+    }
+  }, [engine, gameCase, status, player, settle])
+
+  // the countdown: ticks only while a case is open, no overlay is up, and the
+  // game is not frozen (paused or onboarding). That is the pause behavior.
+  useEffect(() => {
+    if (status !== 'open' || overlay !== 'none' || frozen) return
+    const id = window.setInterval(() => {
+      setSecondsLeft((s) => (s === null ? s : Math.max(0, s - 1)))
+    }, 1000)
+    return () => window.clearInterval(id)
+  }, [status, overlay, frozen])
+
+  // a single warning beep as the clock enters the last ten seconds
+  useEffect(() => {
+    if (secondsLeft === 10) sfx.play('warn')
+  }, [secondsLeft])
+
+  // buzzer + settlement when the clock hits zero
+  useEffect(() => {
+    if (secondsLeft === 0 && status === 'open') void handleTimeout()
+  }, [secondsLeft, status, handleTimeout])
 
   const newCase = useCallback(() => {
     sfx.play('select')
@@ -168,6 +216,7 @@ export function useGame(engine: GameEngine = mockEngine, difficulty: Difficulty 
     busyScanId,
     error,
     probesLeft,
+    secondsLeft,
     scan,
     accuse,
     newCase,

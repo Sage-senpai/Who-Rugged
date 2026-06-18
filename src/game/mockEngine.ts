@@ -205,4 +205,36 @@ export const mockEngine: GameEngine = {
       damages,
     }
   },
+
+  async resolveTimeout(gameCase: GameCase, player: PlayerProfile): Promise<Verdict> {
+    // 0G: Vault.resolve(id, correct=false, accused=0x0, damages=0) -> bond forfeited
+    await delay(200)
+    void player
+
+    const reveal = gameCase.suspects.map((s) => ({
+      suspectId: s.id,
+      isThief: s.isThief,
+      attestation: s.attestation,
+    }))
+
+    return {
+      kind: 'lose',
+      title: "Time's Up",
+      subtitle: 'You ran out the clock, the thief slipped away',
+      rows: [
+        { label: 'Bond forfeited', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
+        { label: 'Thief escaped with', amount: `-${gameCase.stolen} $GG`, sign: 'neg' },
+        { label: 'Net', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
+      ],
+      delta: -gameCase.bond,
+      eloDelta: -(15 + Math.floor(Math.random() * 6)),
+      replayCid: '0x' + hex(56),
+      reveal,
+      accusedHandle: '',
+      accusedProfession: '',
+      lawyerBoosted: false,
+      defense: '',
+      damages: 0,
+    }
+  },
 }

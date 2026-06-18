@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useGame } from './useGame'
 import { nextUnlock } from './profile'
@@ -26,10 +26,24 @@ function needsOnboarding(): boolean {
 
 export function Game() {
   const { settings } = useSettings()
-  const g = useGame(undefined, settings.difficulty)
-  const { player, gameCase, status, verdict, revealed, overlay, busyScanId, error, probesLeft } = g
   const [paused, setPaused] = useState(false)
   const [onboarding, setOnboarding] = useState(needsOnboarding)
+  const [toast, setToast] = useState<string | null>(null)
+  const toastTimer = useRef<number | null>(null)
+
+  // the clock pauses while the game is frozen (paused or first-run onboarding)
+  const frozen = paused || onboarding
+  const g = useGame(undefined, settings.difficulty, frozen)
+  const { player, gameCase, status, verdict, revealed, overlay, busyScanId, error, probesLeft, secondsLeft } = g
+
+  const showToast = (msg: string) => {
+    setToast(msg)
+    if (toastTimer.current) window.clearTimeout(toastTimer.current)
+    toastTimer.current = window.setTimeout(() => setToast(null), 2600)
+  }
+  useEffect(() => () => {
+    if (toastTimer.current) window.clearTimeout(toastTimer.current)
+  }, [])
 
   const dismissOnboarding = () => {
     try {
@@ -40,8 +54,18 @@ export function Game() {
     setOnboarding(false)
   }
 
-  // keyboard shortcuts: 1-5 scan, P pause, N new case. Suspended while any
-  // overlay is up so they never fire behind a dialog.
+  // buzz and call it out the moment the last scan is spent
+  const prevProbes = useRef(probesLeft)
+  useEffect(() => {
+    if (prevProbes.current > 0 && probesLeft === 0 && status === 'open') {
+      sfx.play('buzz')
+      showToast("You're out of scans. Make the call.")
+    }
+    prevProbes.current = probesLeft
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [probesLeft, status])
+
+  // keyboard shortcuts: 1-5 scan, P pause, N new case. Suspended behind overlays.
   const blocked = onboarding || paused || overlay !== 'none'
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -59,15 +83,27 @@ export function Game() {
       } else if (k >= '1' && k <= '5') {
         const idx = Number(k) - 1
         const s = gameCase?.suspects[idx]
-        if (s && status === 'open' && probesLeft > 0 && s.read === null && !busyScanId) {
-          e.preventDefault()
+        if (!s || status !== 'open') return
+        e.preventDefault()
+        if (probesLeft > 0 && s.read === null && !busyScanId) {
           void g.scan(s.id)
+        } else if (s.read !== null) {
+          sfx.play('buzz')
+          showToast('Already scanned that suspect.')
+        } else if (probesLeft === 0) {
+          sfx.play('buzz')
+          showToast("You're out of scans. Make the call.")
         }
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blocked, gameCase, status, probesLeft, busyScanId, g])
+
+  const fmtTime = (s: number | null) =>
+    s === null ? '--:--' : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+  const lowTime = secondsLeft !== null && secondsLeft <= 15 && status === 'open'
 
   const resolved = status === 'resolved'
   const canScan = status === 'open' && probesLeft > 0 && !busyScanId
@@ -151,6 +187,9 @@ export function Game() {
             <span>
               MODE <b>{DIFFICULTY[gameCase ? gameCase.difficulty : settings.difficulty].label}</b>
             </span>
+            <span className={lowTime ? 'time-low' : ''}>
+              TIME <b>{fmtTime(secondsLeft)}</b>
+            </span>
           </div>
         </section>
 
@@ -217,6 +256,14 @@ export function Game() {
       )}
       {paused && <PauseOverlay onResume={() => setPaused(false)} />}
       {onboarding && <Onboarding onDismiss={dismissOnboarding} />}
+      {toast && (
+        <div className="toast" role="status" aria-live="assertive">
+          <span className="toast-buzz" aria-hidden="true">
+            ⚠
+          </span>
+          {toast}
+        </div>
+      )}
     </div>
   )
 }

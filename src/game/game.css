@@ -108,6 +108,35 @@
 }
 .game-view .vault b { color: var(--cream); }
 .game-view .vault .lost b { color: var(--alarm); }
+.game-view .vault .time-low b { color: var(--alarm); animation: blink 0.7s steps(2) infinite; }
+
+/* buzzer toast */
+.game-view .toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  z-index: 48;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  background: var(--alarm);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: var(--sh);
+  font-family: var(--tiny);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 12px 16px;
+  max-width: calc(100vw - 36px);
+  animation: toastin 0.18s ease forwards;
+}
+@keyframes toastin {
+  from { transform: translate(-50%, 12px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+.game-view .toast-buzz { font-size: 14px; }
 
 /* suspect grid */
 .game-view .grid {

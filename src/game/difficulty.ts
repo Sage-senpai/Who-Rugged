@@ -14,6 +14,8 @@ export interface DifficultyConfig {
   baiter: number
   innocent: number
   bondMul: number
+  /** Hard per-case time limit in seconds. The clock pauses with the game. */
+  timeLimit: number
 }
 
 export const DIFFICULTY: Record<Difficulty, DifficultyConfig> = {
@@ -27,6 +29,7 @@ export const DIFFICULTY: Record<Difficulty, DifficultyConfig> = {
     baiter: 50,
     innocent: 24,
     bondMul: 0.8,
+    timeLimit: 120,
   },
   detective: {
     id: 'detective',
@@ -38,6 +41,7 @@ export const DIFFICULTY: Record<Difficulty, DifficultyConfig> = {
     baiter: 58,
     innocent: 26,
     bondMul: 1,
+    timeLimit: 90,
   },
   hardboiled: {
     id: 'hardboiled',
@@ -49,6 +53,7 @@ export const DIFFICULTY: Record<Difficulty, DifficultyConfig> = {
     baiter: 62,
     innocent: 30,
     bondMul: 1.3,
+    timeLimit: 60,
   },
 }
 

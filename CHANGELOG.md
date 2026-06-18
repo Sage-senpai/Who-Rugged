@@ -14,6 +14,19 @@ Planned, in build order. See `MASTER_BUILD_PROMPT.md`.
 - Rank ladder with Undercover Cop unlock at 1200, then Two Thieves at 1400.
 - Courtroom mini-screen on a wrong bust, where the Lawyer profession boosts damages.
 
+## [0.9.0] - 2026-06-18
+
+A clock and a buzzer. The case now has a hard time limit, and running out of scans is called out loud.
+
+### Added
+- A per-case countdown timer with a hard limit by difficulty: 120s on Rookie, 90s on Detective, 60s on Hardboiled. It shows in the case brief and turns alarm red and blinks in the last 15 seconds, with a warning beep at 10.
+- The clock pauses with the game. It freezes during pause, onboarding, the courtroom, and the verdict, and resumes on return, so a paused game never loses time.
+- Time's Up. When the clock hits zero a buzzer sounds and the case auto-settles as a loss: bond forfeited, thief escaped. It skips the courtroom (no one was accused) and goes straight to the verdict.
+- An out-of-scans buzzer and toast. Spending the last scan, or trying to scan with none left, sounds a buzzer and shows a "You're out of scans" banner. Pressing a number key on an already-scanned or unavailable suspect buzzes too.
+
+### Changed
+- The engine gained `resolveTimeout` for the buzzer loss, settled the same way a wrong bust is.
+
 ## [0.8.0] - 2026-06-18
 
 Expressions and difficulty. Suspect faces emote, and the case can be tuned from Rookie to Hardboiled.

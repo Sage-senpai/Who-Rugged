@@ -2,7 +2,7 @@
    zero audio assets and dodges licensing. Blips only. Off by default until a
    user gesture, and fully gated by the Settings "sound" toggle. */
 
-type Sound = 'select' | 'back' | 'toggle' | 'scan' | 'seal' | 'win' | 'lose'
+type Sound = 'select' | 'back' | 'toggle' | 'scan' | 'seal' | 'win' | 'lose' | 'buzz' | 'warn'
 
 let ctx: AudioContext | null = null
 let enabled = true
@@ -74,6 +74,13 @@ export const sfx = {
         break
       case 'lose':
         chord([392, 311, 233, 196], 0.1, 0.22, 'sawtooth')
+        break
+      case 'buzz':
+        blip(170, 0.2, 'sawtooth', 0, 0.1)
+        blip(120, 0.26, 'sawtooth', 0.13, 0.1)
+        break
+      case 'warn':
+        blip(900, 0.08, 'square', 0, 0.06)
         break
     }
   },
