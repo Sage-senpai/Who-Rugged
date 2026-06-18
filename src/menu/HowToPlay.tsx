@@ -47,7 +47,12 @@ export function HowToPlay() {
         <p className="panel-note" style={{ marginTop: 0 }}>
           <b style={{ color: 'var(--sky)' }}>Scan</b> spends one of two interrogations for a read.{' '}
           <b style={{ color: 'var(--alarm)' }}>Accuse</b> locks your bust. Everything is keyboard
-          reachable: Tab to move, Enter or Space to act, Escape to dismiss the verdict.
+          reachable: Tab to move, Enter or Space to act, Escape to dismiss an overlay.
+        </p>
+        <p className="panel-note">
+          Shortcuts in a case: <b style={{ color: 'var(--sky)' }}>1-5</b> scan that suspect,{' '}
+          <b style={{ color: 'var(--sky)' }}>P</b> pause, <b style={{ color: 'var(--sky)' }}>N</b>{' '}
+          new case.
         </p>
       </section>
 

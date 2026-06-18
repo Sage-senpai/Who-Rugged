@@ -16,7 +16,7 @@ import type {
   Suspect,
   Verdict,
 } from '../lib/types'
-import { PROFESSIONS, HANDLES, STATEMENTS, TELLS } from './data'
+import { PROFESSIONS, HANDLES, STATEMENTS, TELLS, DEFENSE, LAWYER_DEFENSE } from './data'
 import { attestation, clamp, delay, hex, pick, shuffle } from '../lib/rng'
 
 const PROBES_PER_CASE = 2
@@ -113,12 +113,16 @@ export const mockEngine: GameEngine = {
     }))
     const replayCid = '0x' + hex(56)
 
+    const isLawyer = accused.profession === 'Lawyer'
     let kind: Verdict['kind']
     let title: string
     let subtitle: string
     let rows: LedgerRow[]
     let delta: number
     let eloDelta: number
+    let damages = 0
+    let lawyerBoosted = false
+    let defense = ''
 
     if (accused.isThief) {
       const bounty = 100 + Math.floor(Math.random() * 5) * 20
@@ -133,32 +137,67 @@ export const mockEngine: GameEngine = {
         { label: 'Net', amount: `+${delta} $GG`, sign: 'pos' },
       ]
     } else if (accused.role === 'baiter') {
-      const damages = gameCase.bond + 120 + Math.floor(Math.random() * 5) * 20
+      let suit = 120 + Math.floor(Math.random() * 5) * 20
+      if (isLawyer) {
+        suit = Math.round(suit * 1.3)
+        lawyerBoosted = true
+      }
+      damages = gameCase.bond + suit
       delta = -damages
       eloDelta = -(28 + Math.floor(Math.random() * 8))
       kind = 'lose'
       title = 'You Got Baited'
-      subtitle = 'Wrongful bust, the innocent had a lawyer waiting'
+      subtitle = isLawyer
+        ? 'Wrongful bust, and the baiter was a Lawyer'
+        : 'Wrongful bust, the bait worked'
       rows = [
         { label: 'Bond forfeited', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
-        { label: 'Lawsuit damages', amount: `-${damages - gameCase.bond} $GG`, sign: 'neg' },
+        { label: lawyerBoosted ? 'Lawsuit damages (boosted)' : 'Lawsuit damages', amount: `-${suit} $GG`, sign: 'neg' },
         { label: 'Thief escaped with', amount: `-${gameCase.stolen} $GG`, sign: 'neg' },
         { label: 'Net', amount: `-${damages} $GG`, sign: 'neg' },
       ]
+      defense = isLawyer ? pick(LAWYER_DEFENSE) : pick(DEFENSE)
     } else {
-      delta = -gameCase.bond
+      const suit = isLawyer ? Math.round(gameCase.bond * 0.5) : 0
+      lawyerBoosted = isLawyer
+      damages = gameCase.bond + suit
+      delta = -damages
       eloDelta = -(18 + Math.floor(Math.random() * 6))
       kind = 'lose'
       title = 'Wrongful Bust'
-      subtitle = 'Innocent suspect, the thief is still loose'
-      rows = [
-        { label: 'Bond forfeited', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
-        { label: 'Thief escaped with', amount: `-${gameCase.stolen} $GG`, sign: 'neg' },
-        { label: 'Net', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
-      ]
+      subtitle = isLawyer
+        ? 'Innocent suspect, and they lawyered up'
+        : 'Innocent suspect, the thief is still loose'
+      rows = isLawyer
+        ? [
+            { label: 'Bond forfeited', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
+            { label: 'Lawsuit damages (boosted)', amount: `-${suit} $GG`, sign: 'neg' },
+            { label: 'Thief escaped with', amount: `-${gameCase.stolen} $GG`, sign: 'neg' },
+            { label: 'Net', amount: `-${damages} $GG`, sign: 'neg' },
+          ]
+        : [
+            { label: 'Bond forfeited', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
+            { label: 'Thief escaped with', amount: `-${gameCase.stolen} $GG`, sign: 'neg' },
+            { label: 'Net', amount: `-${damages} $GG`, sign: 'neg' },
+          ]
+      defense = isLawyer ? pick(LAWYER_DEFENSE) : pick(DEFENSE)
     }
 
     void player // reserved for memory-aware scoring once 0G Storage is wired
-    return { kind, title, subtitle, rows, delta, eloDelta, replayCid, reveal }
+    return {
+      kind,
+      title,
+      subtitle,
+      rows,
+      delta,
+      eloDelta,
+      replayCid,
+      reveal,
+      accusedHandle: accused.handle,
+      accusedProfession: accused.profession,
+      lawyerBoosted,
+      defense,
+      damages,
+    }
   },
 }

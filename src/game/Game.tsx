@@ -1,20 +1,70 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useGame } from './useGame'
 import { nextUnlock } from './profile'
 import { SuspectCard } from './SuspectCard'
 import { VerdictModal } from './VerdictModal'
+import { CourtroomOverlay } from './CourtroomOverlay'
 import { PauseOverlay } from './PauseOverlay'
+import { Onboarding } from './Onboarding'
 import { sfx } from '../lib/sfx'
 import './game.css'
 
 const fmt = (n: number) => n.toLocaleString()
 const caseLabel = (n: number) => '#' + String(n).padStart(4, '0')
+const ONBOARD_KEY = 'who-rugged:onboarded'
+
+function needsOnboarding(): boolean {
+  try {
+    return !localStorage.getItem(ONBOARD_KEY)
+  } catch {
+    return false
+  }
+}
 
 export function Game() {
   const g = useGame()
-  const { player, gameCase, status, verdict, revealed, modalOpen, busyScanId, error, probesLeft } = g
+  const { player, gameCase, status, verdict, revealed, overlay, busyScanId, error, probesLeft } = g
   const [paused, setPaused] = useState(false)
+  const [onboarding, setOnboarding] = useState(needsOnboarding)
+
+  const dismissOnboarding = () => {
+    try {
+      localStorage.setItem(ONBOARD_KEY, '1')
+    } catch {
+      /* non-fatal */
+    }
+    setOnboarding(false)
+  }
+
+  // keyboard shortcuts: 1-5 scan, P pause, N new case. Suspended while any
+  // overlay is up so they never fire behind a dialog.
+  const blocked = onboarding || paused || overlay !== 'none'
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (blocked) return
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      const k = e.key.toLowerCase()
+      if (k === 'p') {
+        e.preventDefault()
+        sfx.play('select')
+        setPaused(true)
+      } else if (k === 'n') {
+        e.preventDefault()
+        g.newCase()
+      } else if (k >= '1' && k <= '5') {
+        const idx = Number(k) - 1
+        const s = gameCase?.suspects[idx]
+        if (s && status === 'open' && probesLeft > 0 && s.read === null && !busyScanId) {
+          e.preventDefault()
+          void g.scan(s.id)
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [blocked, gameCase, status, probesLeft, busyScanId, g])
 
   const resolved = status === 'resolved'
   const canScan = status === 'open' && probesLeft > 0 && !busyScanId
@@ -153,8 +203,14 @@ export function Game() {
         </p>
       </main>
 
-      {modalOpen && verdict && <VerdictModal verdict={verdict} onContinue={g.continueGame} />}
+      {overlay === 'courtroom' && verdict && (
+        <CourtroomOverlay verdict={verdict} onProceed={g.showVerdict} />
+      )}
+      {overlay === 'verdict' && verdict && (
+        <VerdictModal verdict={verdict} onContinue={g.continueGame} />
+      )}
       {paused && <PauseOverlay onResume={() => setPaused(false)} />}
+      {onboarding && <Onboarding onDismiss={dismissOnboarding} />}
     </div>
   )
 }

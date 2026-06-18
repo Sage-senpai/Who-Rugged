@@ -9,6 +9,7 @@ import { ELO_FLOOR, loadPlayer, pushHistory, savePlayer } from './profile'
 import { sfx } from '../lib/sfx'
 
 export type GameStatus = 'sealing' | 'open' | 'resolving' | 'resolved' | 'error'
+export type Overlay = 'none' | 'courtroom' | 'verdict'
 
 export function useGame(engine: GameEngine = mockEngine) {
   const [player, setPlayer] = useState<PlayerProfile>(loadPlayer)
@@ -16,7 +17,7 @@ export function useGame(engine: GameEngine = mockEngine) {
   const [status, setStatus] = useState<GameStatus>('sealing')
   const [verdict, setVerdict] = useState<Verdict | null>(null)
   const [revealed, setRevealed] = useState(false)
-  const [modalOpen, setModalOpen] = useState(false)
+  const [overlay, setOverlay] = useState<Overlay>('none')
   const [busyScanId, setBusyScanId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,7 +29,7 @@ export function useGame(engine: GameEngine = mockEngine) {
       setError(null)
       setVerdict(null)
       setRevealed(false)
-      setModalOpen(false)
+      setOverlay('none')
       setGameCase(null)
       try {
         const c = await engine.openCase(caseNo)
@@ -91,6 +92,7 @@ export function useGame(engine: GameEngine = mockEngine) {
   const accuse = useCallback(
     async (suspectId: string) => {
       if (!gameCase || status !== 'open') return
+      sfx.play('select')
       setStatus('resolving')
       try {
         const v = await engine.resolve(gameCase, suspectId, player)
@@ -119,7 +121,8 @@ export function useGame(engine: GameEngine = mockEngine) {
         })
 
         modalTimer.current = window.setTimeout(() => {
-          setModalOpen(true)
+          // a wrong bust goes through the courtroom first, a win straight to the verdict
+          setOverlay(v.kind === 'lose' ? 'courtroom' : 'verdict')
           sfx.play(v.kind)
         }, 720)
       } catch {
@@ -131,6 +134,7 @@ export function useGame(engine: GameEngine = mockEngine) {
   )
 
   const newCase = useCallback(() => {
+    sfx.play('select')
     setPlayer((p) => {
       const caseNo = p.caseNo + 1
       void openCase(caseNo)
@@ -138,8 +142,10 @@ export function useGame(engine: GameEngine = mockEngine) {
     })
   }, [openCase])
 
+  const showVerdict = useCallback(() => setOverlay('verdict'), [])
+
   const continueGame = useCallback(() => {
-    setModalOpen(false)
+    setOverlay('none')
     newCase()
   }, [newCase])
 
@@ -155,13 +161,14 @@ export function useGame(engine: GameEngine = mockEngine) {
     status,
     verdict,
     revealed,
-    modalOpen,
+    overlay,
     busyScanId,
     error,
     probesLeft,
     scan,
     accuse,
     newCase,
+    showVerdict,
     continueGame,
     retry,
   }

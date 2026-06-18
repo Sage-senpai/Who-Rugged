@@ -66,6 +66,15 @@ export interface Verdict {
   /** 0G Storage replay id / root hash. */
   replayCid: string
   reveal: RevealEntry[]
+  /** Who got arrested, for the reveal and the courtroom screen. */
+  accusedHandle: string
+  accusedProfession: string
+  /** True when the accused was a Lawyer and the lawsuit damages were boosted. */
+  lawyerBoosted: boolean
+  /** In-character defense line shown in the courtroom on a wrong bust. */
+  defense: string
+  /** Total damages the accused collects on a wrong bust, 0 on a win. */
+  damages: number
 }
 
 export interface PlayerProfile {

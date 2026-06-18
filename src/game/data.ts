@@ -55,6 +55,22 @@ export const STATEMENTS: Record<RoleType, readonly string[]> = {
   ],
 }
 
+/* Defense lines for the courtroom screen on a wrong bust. The accused is being
+   paid, so the tone is smug, not pleading. No em dashes. */
+export const DEFENSE: readonly string[] = [
+  'No vault access, no motive, no case. Pay up.',
+  'You staked a bond on a hunch. The bond is mine now.',
+  'Wrongful arrest. The chain backs me, the cop does not.',
+  'I told you to take your shot. You missed. Settle.',
+  'Cuffs off, check signed. Better luck next case, officer.',
+]
+
+export const LAWYER_DEFENSE: readonly string[] = [
+  'My counsel was on retainer before you reached for the cuffs. Damages, enhanced.',
+  'You arrested a Lawyer. The settlement just doubled. Read it and weep.',
+  'Procedure, precedent, payout. I wrote the brief last night. Pay the boosted figure.',
+]
+
 /* Privacy preserving "tells": derived from the noisy read, NOT the true role,
    so a probe never leaks the answer. Buckets by read strength. */
 export const TELLS = {

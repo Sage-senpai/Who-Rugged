@@ -439,6 +439,149 @@
 }
 .verdict-overlay .bigbtn:focus-visible { outline: 3px solid var(--lime); outline-offset: 3px; }
 
+/* courtroom overlay */
+.court-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 16, 31, 0.86);
+  display: grid;
+  place-items: center;
+  z-index: 45;
+  padding: 18px;
+}
+.court-card {
+  background: var(--void-2);
+  border: 3px solid var(--alarm);
+  box-shadow: var(--sh);
+  width: 100%;
+  max-width: 460px;
+  padding: 22px;
+}
+.court-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-family: var(--tiny);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--alarm);
+  border-bottom: 2px solid var(--panel-2);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+.court-bar .gavel { font-size: 18px; animation: gavel 0.6s ease 1; }
+@keyframes gavel {
+  0% { transform: rotate(-30deg); }
+  40% { transform: rotate(8deg); }
+  100% { transform: rotate(0); }
+}
+.court-accused { display: flex; align-items: center; gap: var(--s3); margin-bottom: 14px; }
+.court-mug {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border: 3px solid var(--sky);
+  background: var(--panel-2);
+  overflow: hidden;
+}
+.court-mug .fb { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--pix); font-size: 22px; color: var(--sky); }
+.court-mug img { position: relative; width: 100%; height: 100%; display: block; }
+.court-name { font-family: var(--tiny); font-size: 12px; color: var(--sky); letter-spacing: 0.5px; }
+.court-job { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 5px; }
+.court-defense {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--cream);
+  background: var(--void);
+  border-left: 3px solid var(--alarm);
+  padding: 12px 14px;
+  margin: 0 0 14px;
+}
+.court-lawyer {
+  font-family: var(--tiny);
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--ink);
+  background: var(--gold);
+  padding: 6px 10px;
+  display: inline-block;
+  margin-bottom: 14px;
+}
+.court-suing {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  border: 2px solid var(--panel-2);
+  padding: 12px 14px;
+  margin-bottom: 18px;
+}
+.court-suing .cs-lab { font-family: var(--tiny); font-size: 9px; letter-spacing: 1px; color: var(--dim); }
+.court-suing .cs-amt {
+  font-family: var(--pix);
+  font-weight: 700;
+  font-size: 30px;
+  color: var(--alarm);
+  animation: slam 0.4s ease 1;
+}
+.court-btn {
+  width: 100%;
+  font-family: var(--tiny);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 13px;
+  border: 3px solid var(--ink);
+  background: var(--gold);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: var(--sh);
+}
+.court-btn:focus-visible { outline: 3px solid var(--lime); outline-offset: 3px; }
+
+/* onboarding overlay */
+.onb-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 16, 31, 0.88);
+  display: grid;
+  place-items: center;
+  z-index: 46;
+  padding: 18px;
+}
+.onb-card {
+  background: var(--void-2);
+  border: 3px solid var(--sky);
+  box-shadow: var(--sh);
+  width: 100%;
+  max-width: 460px;
+  padding: 24px;
+}
+.onb-eyebrow { font-family: var(--tiny); font-size: 10px; letter-spacing: 2px; color: var(--gold); }
+.onb-card h2 { font-family: var(--pix); font-weight: 700; font-size: 24px; color: var(--cream); margin: 10px 0 18px; }
+.onb-beats { list-style: none; margin: 0 0 18px; padding: 0; }
+.onb-beats li { display: flex; gap: var(--s3); padding: 8px 0; border-bottom: 2px solid var(--panel); }
+.onb-beats li:last-child { border-bottom: 0; }
+.onb-k { font-family: var(--tiny); font-size: 11px; letter-spacing: 1px; color: var(--sky); width: 64px; flex-shrink: 0; }
+.onb-v { font-family: var(--mono); font-size: 12.5px; color: var(--cream); }
+.onb-btn {
+  width: 100%;
+  font-family: var(--tiny);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 13px;
+  border: 3px solid var(--ink);
+  background: var(--gold);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: var(--sh);
+}
+.onb-btn:focus-visible { outline: 3px solid var(--lime); outline-offset: 3px; }
+.onb-foot { font-family: var(--mono); font-size: 11px; color: var(--dim); text-align: center; margin: 14px 0 0; }
+.onb-foot b { color: var(--sky); }
+
 @media (max-width: 520px) {
   .game-view .grid { grid-template-columns: 1fr; }
   .game-view h1 { text-shadow: 3px 3px 0 var(--alarm), 6px 6px 0 var(--sky); }

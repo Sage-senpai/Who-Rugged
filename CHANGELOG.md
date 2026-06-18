@@ -14,6 +14,21 @@ Planned, in build order. See `MASTER_BUILD_PROMPT.md`.
 - Rank ladder with Undercover Cop unlock at 1200, then Two Thieves at 1400.
 - Courtroom mini-screen on a wrong bust, where the Lawyer profession boosts damages.
 
+## [0.6.0] - 2026-06-18
+
+Game feel. First-run onboarding, the courtroom mini-screen, keyboard shortcuts, and more sound.
+
+### Added
+- First-run onboarding: a one-time coach card on the first case explaining the four beats and the keyboard shortcuts, dismissible and remembered on the device.
+- Courtroom mini-screen on a wrong bust (spec layer 7). Before the verdict, the suspect you wrongly arrested presents a defense, the damages figure slams in, and a Lawyer collects boosted damages with its own banner. A win goes straight to the verdict.
+- The Lawyer profession now matters: arresting a Lawyer boosts the lawsuit damages (and adds a suit to an otherwise bond-only innocent bust), surfaced in the ledger and the courtroom.
+- Keyboard shortcuts in a case: 1 to 5 scan that suspect, P pause, N new case. Suspended while any overlay is open, and documented in How to Play and the onboarding card.
+- More sound: arcade blips now also fire on accuse and new case, alongside the existing scan, seal break, and verdict stings.
+
+### Changed
+- The post-reveal flow is now a single overlay state (none, courtroom, verdict) so a loss routes through the courtroom and a win does not.
+- The verdict model carries the accused handle, profession, defense line, total damages, and a lawyer-boost flag.
+
 ## [0.5.0] - 2026-06-18
 
 The game shell. The app is now a proper game and not just a single case screen: a title menu, settings, a how-to-play screen, a stats and leaderboard screen, in-game pause, and sound.
