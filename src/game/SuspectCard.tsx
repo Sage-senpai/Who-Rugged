@@ -1,6 +1,18 @@
-import type { Suspect } from '../lib/types'
+import type { Mood, Suspect } from '../lib/types'
 import { spriteFor, initialFor } from '../lib/avatar'
 import { clamp } from '../lib/rng'
+
+/* Pick the face mood. Reveal aside, this only ever mirrors the meter the
+   player already sees, so it never leaks the hidden role. */
+function moodFor(s: Suspect, revealed: boolean, scanning: boolean): Mood {
+  if (revealed) return s.isThief ? 'smug' : 'calm'
+  if (s.mood) return s.mood // future: supplied by the Compute agent
+  if (scanning) return 'nervous'
+  if (s.read === null) return 'calm'
+  if (s.read >= 60) return 'rattled'
+  if (s.read >= 42) return 'nervous'
+  return 'calm'
+}
 
 interface Props {
   suspect: Suspect
@@ -27,6 +39,7 @@ export function SuspectCard({
 }: Props) {
   const hasRead = suspect.read !== null
   const pct = hasRead ? clamp(Math.round(suspect.read as number), 5, 95) : 0
+  const mood = moodFor(suspect, revealed, scanning)
 
   const meterClass = scanning ? 'meter scanning' : hasRead ? 'meter' : 'meter unread'
   const cardClass = [
@@ -52,7 +65,7 @@ export function SuspectCard({
           </span>
           <img
             alt=""
-            src={spriteFor(suspect.handle)}
+            src={spriteFor(suspect.handle, mood)}
             onError={(e) => {
               ;(e.currentTarget as HTMLImageElement).style.display = 'none'
             }}

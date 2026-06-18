@@ -5,6 +5,15 @@
 /** Hidden role. In production this never leaves the TEE until reveal. */
 export type RoleType = 'innocent' | 'thief' | 'baiter'
 
+/** Visible emotional read, drives the pixel face. Derived from the noisy
+ *  suspicion read today, supplied by the Compute agent later. Never leaks the
+ *  role: it only mirrors what the meter already shows. */
+export type Mood = 'calm' | 'nervous' | 'smug' | 'rattled'
+
+/** Case difficulty, chosen in Settings. Tunes scans, read noise, how close the
+ *  baiter reads to the thief, and the stakes. */
+export type Difficulty = 'rookie' | 'detective' | 'hardboiled'
+
 export interface Suspect {
   id: string
   handle: string
@@ -17,6 +26,8 @@ export interface Suspect {
   read: number | null
   /** Short non-revealing tell shown next to a read, e.g. "elevated deflection". */
   tell: string | null
+  /** Optional explicit mood. When null, the card derives one from the read. */
+  mood: Mood | null
 
   /* --- sealed until reveal ---
      These live here for the local mock only. The real engine keeps the
@@ -41,6 +52,7 @@ export interface GameCase {
   probesUsed: number
   status: CaseStatus
   accusedId: string | null
+  difficulty: Difficulty
 }
 
 export interface LedgerRow {
@@ -109,7 +121,7 @@ export interface ProbeResult {
  *  Mock today (src/game/mockEngine.ts), real 0G Compute/Chain/Storage later. */
 export interface GameEngine {
   /** openCase on Vault.sol + sealRoles() + agentSpeak() in production. */
-  openCase(caseNo: number): Promise<GameCase>
+  openCase(caseNo: number, difficulty: Difficulty): Promise<GameCase>
   /** A single privacy-preserving suspicion read via 0G Compute. */
   probe(gameCase: GameCase, suspectId: string): Promise<ProbeResult>
   /** verifyReveal() + Vault.resolve() + saveReplay() in production. */

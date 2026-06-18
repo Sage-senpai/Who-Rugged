@@ -14,6 +14,17 @@ Planned, in build order. See `MASTER_BUILD_PROMPT.md`.
 - Rank ladder with Undercover Cop unlock at 1200, then Two Thieves at 1400.
 - Courtroom mini-screen on a wrong bust, where the Lawyer profession boosts damages.
 
+## [0.8.0] - 2026-06-18
+
+Expressions and difficulty. Suspect faces emote, and the case can be tuned from Rookie to Hardboiled.
+
+### Added
+- Mood-driven pixel faces. Each suspect's DiceBear mouth shifts with their mood: calm at rest, nervous or rattled as their suspicion meter climbs, and the thief smirks at the reveal. The mood is derived only from the meter the player already sees, so it never leaks the role. A `mood` field on the suspect is the seam for a Compute agent to drive expressions directly later.
+- Three difficulty levels, chosen in Settings and persisted: Rookie (three scans, clearer reads, obvious bait), Detective (two scans, standard), and Hardboiled (one scan, heavy noise, the baiter reads almost exactly like the thief, higher bond). The active mode shows in the case brief and applies to the next case.
+
+### Changed
+- The engine reads a difficulty config for scan count, read noise, the per-role suspicion centres, and the bond multiplier. `openCase` now takes the difficulty.
+
 ## [0.7.0] - 2026-06-18
 
 Sound. A chiptune music engine with a unique theme per screen, plus richer effects.

@@ -3,12 +3,15 @@ import { ScreenShell } from '../components/ScreenShell'
 import { Toggle } from '../components/Toggle'
 import { useSettings } from '../settings/SettingsContext'
 import { clearProgress } from '../game/profile'
+import { DIFFICULTIES } from '../game/difficulty'
+import { sfx } from '../lib/sfx'
 import './menu.css'
 
 export function Settings() {
   const { settings, set } = useSettings()
   const [confirming, setConfirming] = useState(false)
   const [done, setDone] = useState(false)
+  const activeDiff = DIFFICULTIES.find((d) => d.id === settings.difficulty) ?? DIFFICULTIES[1]
 
   function reset() {
     clearProgress()
@@ -18,6 +21,28 @@ export function Settings() {
 
   return (
     <ScreenShell title="Settings" sub="Tune the cabinet. Everything saves on this device." back={{ to: '/menu', label: '◀ Menu' }}>
+      <section className="panel">
+        <h2 className="panel-h">Gameplay difficulty</h2>
+        <div className="seg" role="radiogroup" aria-label="Difficulty">
+          {DIFFICULTIES.map((d) => (
+            <button
+              key={d.id}
+              type="button"
+              role="radio"
+              aria-checked={settings.difficulty === d.id}
+              className={`seg-btn ${settings.difficulty === d.id ? 'active' : ''}`}
+              onClick={() => {
+                sfx.play('toggle')
+                set('difficulty', d.id)
+              }}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+        <p className="panel-note">{activeDiff.blurb} Applies to your next case.</p>
+      </section>
+
       <section className="panel">
         <h2 className="panel-h">Display</h2>
         <Toggle

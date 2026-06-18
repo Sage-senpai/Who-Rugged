@@ -7,6 +7,7 @@
    Privacy is a mechanic: the suspicion read and tell are derived from a noisy
    score, never from the true role, exactly as probe.ts must behave on Compute. */
 import type {
+  Difficulty,
   GameCase,
   GameEngine,
   LedgerRow,
@@ -17,16 +18,16 @@ import type {
   Verdict,
 } from '../lib/types'
 import { PROFESSIONS, HANDLES, STATEMENTS, TELLS, DEFENSE, LAWYER_DEFENSE } from './data'
+import { DIFFICULTY } from './difficulty'
 import { attestation, clamp, delay, hex, pick, shuffle } from '../lib/rng'
 
-const PROBES_PER_CASE = 2
-
-/** Base suspicion centre per role. Thief and baiter both read hot, which is
- *  the whole point: a high meter is not proof. */
-function baseTell(role: RoleType): number {
-  if (role === 'thief') return 64
-  if (role === 'baiter') return 58
-  return 26
+/** Base suspicion centre per role for the given difficulty. Thief and baiter
+ *  both read hot, which is the whole point: a high meter is not proof. */
+function baseTell(role: RoleType, difficulty: Difficulty): number {
+  const cfg = DIFFICULTY[difficulty]
+  if (role === 'thief') return cfg.thief
+  if (role === 'baiter') return cfg.baiter
+  return cfg.innocent
 }
 
 function tellNote(read: number): string {
@@ -36,13 +37,14 @@ function tellNote(read: number): string {
 }
 
 export const mockEngine: GameEngine = {
-  async openCase(caseNo: number): Promise<GameCase> {
+  async openCase(caseNo: number, difficulty: Difficulty): Promise<GameCase> {
     // 0G: Vault.openCase(id, stolen) + sealRoles(caseId, agentIds) + agentSpeak()
     await delay(420) // stands in for sealing roles inside the TEE
 
+    const cfg = DIFFICULTY[difficulty]
     const pool = 900 + Math.floor(Math.random() * 5) * 50
     const stolen = 250 + Math.floor(Math.random() * 5) * 50
-    const bond = 150 + Math.floor(Math.random() * 3) * 50
+    const bond = Math.round((150 + Math.floor(Math.random() * 3) * 50) * cfg.bondMul)
 
     const jobs = shuffle(PROFESSIONS).slice(0, 5)
     const handles = shuffle(HANDLES).slice(0, 5)
@@ -63,6 +65,7 @@ export const mockEngine: GameEngine = {
         attestation: attestation(),
         read: null,
         tell: null,
+        mood: null,
         role,
         isThief: i === thiefIdx,
       }
@@ -74,10 +77,11 @@ export const mockEngine: GameEngine = {
       stolen,
       bond,
       suspects,
-      probesAllowed: PROBES_PER_CASE,
+      probesAllowed: cfg.probes,
       probesUsed: 0,
       status: 'open',
       accusedId: null,
+      difficulty,
     }
   },
 
@@ -88,7 +92,8 @@ export const mockEngine: GameEngine = {
     const suspect = gameCase.suspects.find((s) => s.id === suspectId)
     if (!suspect) throw new Error('Unknown suspect')
 
-    const noisy = baseTell(suspect.role) + (Math.random() * 16 - 8)
+    const noise = DIFFICULTY[gameCase.difficulty].noise
+    const noisy = baseTell(suspect.role, gameCase.difficulty) + (Math.random() * 2 - 1) * noise
     const read = clamp(Math.round(noisy), 5, 95)
 
     return {

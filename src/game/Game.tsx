@@ -7,6 +7,8 @@ import { VerdictModal } from './VerdictModal'
 import { CourtroomOverlay } from './CourtroomOverlay'
 import { PauseOverlay } from './PauseOverlay'
 import { Onboarding } from './Onboarding'
+import { DIFFICULTY } from './difficulty'
+import { useSettings } from '../settings/SettingsContext'
 import { sfx } from '../lib/sfx'
 import './game.css'
 
@@ -23,7 +25,8 @@ function needsOnboarding(): boolean {
 }
 
 export function Game() {
-  const g = useGame()
+  const { settings } = useSettings()
+  const g = useGame(undefined, settings.difficulty)
   const { player, gameCase, status, verdict, revealed, overlay, busyScanId, error, probesLeft } = g
   const [paused, setPaused] = useState(false)
   const [onboarding, setOnboarding] = useState(needsOnboarding)
@@ -144,6 +147,9 @@ export function Game() {
             </span>
             <span>
               BOND AT RISK <b>{gameCase ? `${gameCase.bond} $GG` : '...'}</b>
+            </span>
+            <span>
+              MODE <b>{DIFFICULTY[gameCase ? gameCase.difficulty : settings.difficulty].label}</b>
             </span>
           </div>
         </section>

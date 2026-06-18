@@ -3,6 +3,7 @@
    explicit reduce-motion override on top of the system pref) and audio. */
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import type { Difficulty } from '../lib/types'
 import { sfx } from '../lib/sfx'
 import { music } from '../lib/music'
 
@@ -12,6 +13,7 @@ export interface Settings {
   sound: boolean
   music: boolean
   reduceMotion: boolean
+  difficulty: Difficulty
 }
 
 const DEFAULTS: Settings = {
@@ -20,6 +22,7 @@ const DEFAULTS: Settings = {
   sound: true,
   music: true,
   reduceMotion: false,
+  difficulty: 'detective',
 }
 
 const KEY = 'who-rugged:settings'

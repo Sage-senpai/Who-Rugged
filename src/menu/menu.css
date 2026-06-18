@@ -183,6 +183,26 @@
 }
 .toggle.on .toggle-state { color: var(--lime); margin-left: 6px; }
 
+/* segmented control (difficulty) */
+.seg { display: flex; gap: var(--s2); flex-wrap: wrap; }
+.seg-btn {
+  flex: 1;
+  min-width: 90px;
+  font-family: var(--tiny);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 13px 10px;
+  border: 3px solid var(--ink);
+  background: var(--panel);
+  color: var(--dim);
+  cursor: pointer;
+  box-shadow: var(--sh-sm);
+}
+.seg-btn:hover { color: var(--cream); border-color: var(--sky); }
+.seg-btn:focus-visible { outline: 3px solid var(--lime); outline-offset: 3px; }
+.seg-btn.active { background: var(--gold); color: var(--ink); border-color: var(--ink); }
+
 /* danger row */
 .danger-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); flex-wrap: wrap; }
 .danger-row .dr-text { font-family: var(--mono); font-size: 12px; color: var(--cream); }

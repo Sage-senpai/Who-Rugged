@@ -3,7 +3,7 @@
    The engine is injected so a real 0G engine can replace the mock with no
    change here. */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { GameCase, GameEngine, PlayerProfile, Verdict } from '../lib/types'
+import type { Difficulty, GameCase, GameEngine, PlayerProfile, Verdict } from '../lib/types'
 import { mockEngine } from './mockEngine'
 import { ELO_FLOOR, loadPlayer, pushHistory, savePlayer } from './profile'
 import { sfx } from '../lib/sfx'
@@ -11,8 +11,11 @@ import { sfx } from '../lib/sfx'
 export type GameStatus = 'sealing' | 'open' | 'resolving' | 'resolved' | 'error'
 export type Overlay = 'none' | 'courtroom' | 'verdict'
 
-export function useGame(engine: GameEngine = mockEngine) {
+export function useGame(engine: GameEngine = mockEngine, difficulty: Difficulty = 'detective') {
   const [player, setPlayer] = useState<PlayerProfile>(loadPlayer)
+  // ref so changing difficulty applies to the next case, not the current one
+  const diffRef = useRef(difficulty)
+  diffRef.current = difficulty
   const [gameCase, setGameCase] = useState<GameCase | null>(null)
   const [status, setStatus] = useState<GameStatus>('sealing')
   const [verdict, setVerdict] = useState<Verdict | null>(null)
@@ -32,7 +35,7 @@ export function useGame(engine: GameEngine = mockEngine) {
       setOverlay('none')
       setGameCase(null)
       try {
-        const c = await engine.openCase(caseNo)
+        const c = await engine.openCase(caseNo, diffRef.current)
         setGameCase(c)
         setStatus('open')
       } catch {
