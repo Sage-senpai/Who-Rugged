@@ -282,6 +282,18 @@ img {
   }
 }
 
+/* settings-driven overrides (classes set on <html> by SettingsContext) */
+:root.no-flicker .crt {
+  animation: none !important;
+}
+:root.force-reduce *,
+:root.force-reduce *::before,
+:root.force-reduce *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -5,44 +5,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { GameCase, GameEngine, PlayerProfile, Verdict } from '../lib/types'
 import { mockEngine } from './mockEngine'
+import { ELO_FLOOR, loadPlayer, pushHistory, savePlayer } from './profile'
+import { sfx } from '../lib/sfx'
 
 export type GameStatus = 'sealing' | 'open' | 'resolving' | 'resolved' | 'error'
-
-const STORAGE_KEY = 'who-rugged:player'
-const ELO_FLOOR = 800
-
-const DEFAULT_PLAYER: PlayerProfile = {
-  balance: 1000,
-  elo: 1000,
-  played: 0,
-  wins: 0,
-  caseNo: 1,
-}
-
-function loadPlayer(): PlayerProfile {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return { ...DEFAULT_PLAYER }
-    const parsed = JSON.parse(raw) as Partial<PlayerProfile>
-    return { ...DEFAULT_PLAYER, ...parsed }
-  } catch {
-    return { ...DEFAULT_PLAYER }
-  }
-}
-
-function savePlayer(p: PlayerProfile): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(p))
-  } catch {
-    /* storage may be unavailable (private mode); the round still plays */
-  }
-}
-
-export function nextUnlock(elo: number): string {
-  if (elo >= 1400) return 'UNLOCKED: Two Thieves'
-  if (elo >= 1200) return 'UNLOCKED: Undercover Cops'
-  return 'Reach RANK 1200 to unlock Undercover Cops'
-}
 
 export function useGame(engine: GameEngine = mockEngine) {
   const [player, setPlayer] = useState<PlayerProfile>(loadPlayer)
@@ -99,6 +65,7 @@ export function useGame(engine: GameEngine = mockEngine) {
       setBusyScanId(suspectId)
       try {
         const result = await engine.probe(gameCase, suspectId)
+        sfx.play('scan')
         setGameCase((prev) =>
           prev
             ? {
@@ -131,6 +98,9 @@ export function useGame(engine: GameEngine = mockEngine) {
         setVerdict(v)
         setRevealed(true) // break the seals
         setStatus('resolved')
+        sfx.play('seal')
+
+        const eloAfter = Math.max(ELO_FLOOR, player.elo + v.eloDelta)
         setPlayer((p) => ({
           ...p,
           balance: p.balance + v.delta,
@@ -138,7 +108,20 @@ export function useGame(engine: GameEngine = mockEngine) {
           played: p.played + 1,
           wins: p.wins + (v.kind === 'win' ? 1 : 0),
         }))
-        modalTimer.current = window.setTimeout(() => setModalOpen(true), 720)
+        pushHistory({
+          caseNo: gameCase.caseId,
+          kind: v.kind,
+          title: v.title,
+          delta: v.delta,
+          eloAfter,
+          replayCid: v.replayCid,
+          at: Date.now(),
+        })
+
+        modalTimer.current = window.setTimeout(() => {
+          setModalOpen(true)
+          sfx.play(v.kind)
+        }, 720)
       } catch {
         setError('Settlement failed before payout. No funds moved. Try the accusation again.')
         setStatus('open')

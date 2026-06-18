@@ -76,6 +76,19 @@ export interface PlayerProfile {
   caseNo: number
 }
 
+/** A resolved case, kept locally for the stats screen. In production this is
+ *  what gets written to 0G Storage as a verifiable replay. */
+export interface HistoryEntry {
+  caseNo: number
+  kind: 'win' | 'lose'
+  title: string
+  delta: number
+  eloAfter: number
+  replayCid: string
+  /** ms epoch, stamped by the caller (engine stays time-free). */
+  at: number
+}
+
 export interface ProbeResult {
   suspectId: string
   read: number

@@ -10,7 +10,7 @@ Built for the 0G Zero Cup, 2026.
 
 ## Status
 
-Layer 1 is live. The blueprint is now a real React + Vite + TypeScript app: the marketing site at `/` and the fully playable game at `/play`, sharing one design system. The game loop runs end to end against a local engine that stands in for the 0G calls, with every seam marked for where Compute, Chain, and Storage drop in next. See `CHANGELOG.md` for what has shipped and `MASTER_BUILD_PROMPT.md` plus `docs/PROMPTS.md` for the remaining layers.
+Layer 1 is live, with a full game shell on top. The blueprint is now a real React + Vite + TypeScript app: the marketing site at `/`, a title menu at `/menu`, how-to-play, settings, and stats screens, and the playable game at `/play` with in-game pause and sound, all sharing one design system. The game loop runs end to end against a local engine that stands in for the 0G calls, with every seam marked for where Compute, Chain, and Storage drop in next. See `CHANGELOG.md` for what has shipped and `MASTER_BUILD_PROMPT.md` plus `docs/PROMPTS.md` for the remaining layers.
 
 The two files in `blueprints/` stay as the frozen design contract. The app should read as the same world and should not regress their polish.
 
@@ -22,17 +22,20 @@ who-rugged/
   package.json  vite.config.ts  tsconfig.*.json
   .env.example  .gitignore
   src/
-    main.tsx  App.tsx           entry + router (/ landing, /play game)
+    main.tsx  App.tsx           entry + router (landing, menu, screens, game)
     styles/tokens.css           the shared design system (palette, type, CRT)
-    components/Crt.tsx           CRT scanline + vignette overlay
+    settings/SettingsContext.tsx  persisted settings, applied as <html> classes
+    components/
+      Crt.tsx  RouteFallback.tsx  ScreenShell.tsx  Toggle.tsx
     lib/
       types.ts                  domain types + the GameEngine seam
       avatar.ts                 self-hosted DiceBear sprites (deterministic)
-      rng.ts                    randomness + attestation helpers
+      rng.ts  sfx.ts            helpers + Web Audio arcade blips
     game/
-      Game.tsx  SuspectCard.tsx  VerdictModal.tsx  useGame.ts
-      mockEngine.ts             local engine; each method maps to a 0G call
-      data.ts  game.css
+      Game.tsx  SuspectCard.tsx  VerdictModal.tsx  PauseOverlay.tsx
+      useGame.ts  mockEngine.ts  profile.ts  data.ts  game.css
+    menu/
+      Menu.tsx  HowToPlay.tsx  Settings.tsx  Stats.tsx  menu.css
     landing/
       Landing.tsx  Lineup.tsx  landing.css
   blueprints/

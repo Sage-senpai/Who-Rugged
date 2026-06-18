@@ -39,7 +39,7 @@ export function Landing() {
                 a hardware enclave, the pot lives on-chain, and the whole round is yours to verify.
               </p>
               <div className="cta">
-                <Link className="btn btn-gold" to="/play">
+                <Link className="btn btn-gold" to="/menu">
                   ▶ Press Start
                 </Link>
                 <a className="btn btn-ghost" href="#play">
@@ -260,7 +260,7 @@ export function Landing() {
           </div>
 
           <div className="cta" style={{ marginTop: 26 }}>
-            <Link className="btn btn-gold" to="/play">
+            <Link className="btn btn-gold" to="/menu">
               ▶ Press Start
             </Link>
           </div>
@@ -279,7 +279,7 @@ export function Landing() {
             <a href="#play">HOW IT WORKS</a>
             <a href="#og">WHY 0G</a>
             <a href="#kit">UI KIT</a>
-            <Link to="/play">PLAY</Link>
+            <Link to="/menu">PLAY</Link>
           </div>
           <p className="fine">
             A crime-deduction game on 0G. Built for the Zero Cup, 2026. Not actually from 1986.

@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { useGame, nextUnlock } from './useGame'
+import { useGame } from './useGame'
+import { nextUnlock } from './profile'
 import { SuspectCard } from './SuspectCard'
 import { VerdictModal } from './VerdictModal'
+import { PauseOverlay } from './PauseOverlay'
+import { sfx } from '../lib/sfx'
 import './game.css'
 
 const fmt = (n: number) => n.toLocaleString()
@@ -11,6 +14,7 @@ const caseLabel = (n: number) => '#' + String(n).padStart(4, '0')
 export function Game() {
   const g = useGame()
   const { player, gameCase, status, verdict, revealed, modalOpen, busyScanId, error, probesLeft } = g
+  const [paused, setPaused] = useState(false)
 
   const resolved = status === 'resolved'
   const canScan = status === 'open' && probesLeft > 0 && !busyScanId
@@ -48,9 +52,15 @@ export function Game() {
           <span className="b lime">
             SOLVED <i>{player.wins}/{player.played}</i>
           </span>
-          <Link className="home" to="/">
-            ◀ EXIT
-          </Link>
+          <button
+            className="home pausebtn"
+            onClick={() => {
+              sfx.play('select')
+              setPaused(true)
+            }}
+          >
+            ❚❚ MENU
+          </button>
           <span className="coin">◉ INSERT COIN</span>
         </div>
       </header>
@@ -144,6 +154,7 @@ export function Game() {
       </main>
 
       {modalOpen && verdict && <VerdictModal verdict={verdict} onContinue={g.continueGame} />}
+      {paused && <PauseOverlay onResume={() => setPaused(false)} />}
     </div>
   )
 }

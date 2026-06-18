@@ -14,6 +14,24 @@ Planned, in build order. See `MASTER_BUILD_PROMPT.md`.
 - Rank ladder with Undercover Cop unlock at 1200, then Two Thieves at 1400.
 - Courtroom mini-screen on a wrong bust, where the Lawyer profession boosts damages.
 
+## [0.5.0] - 2026-06-18
+
+The game shell. The app is now a proper game and not just a single case screen: a title menu, settings, a how-to-play screen, a stats and leaderboard screen, in-game pause, and sound.
+
+### Added
+- Main menu at `/menu` (Play, How to Play, Stats, Settings). The landing's Press Start now opens the menu instead of dropping straight into a case.
+- How to Play at `/how`: the four beats, the bait economy, controls, the color legend, and why it cannot cheat.
+- Settings at `/settings`, persisted on the device: CRT scanlines, screen flicker, sound effects, an explicit reduce-motion override on top of the system preference, and a two-step "Reset progress" wipe.
+- Stats at `/stats`: balance, rank, record, win rate, a progress bar toward the next rank unlock, your recent cases, and a sample leaderboard that drops in your rank (reads on-chain once the contract lands).
+- In-game pause overlay with quick toggles for sound, scanlines, and motion, plus links to How to Play, Settings, and Quit to Menu. Escape resumes; opening it does not lose the case.
+- Synthesized arcade sound effects via Web Audio (zero audio assets, no licensing): blips on scan, seal break, and the win or lose verdict, all gated by the sound setting.
+- Case history persistence: every resolved case is recorded locally, the seam for 0G Storage replays.
+
+### Changed
+- Settings apply globally as classes on the document root, so CRT flicker and motion respond in plain CSS. The CRT overlay is removed from the DOM entirely when scanlines are off.
+- Player and history persistence moved into a shared `src/game/profile.ts` used by both the game loop and the stats screen.
+- Every screen loads as its own route chunk, keeping each entry point small.
+
 ## [0.4.1] - 2026-06-17
 
 Polish pass over Layer 1. Responsiveness, performance, and accessibility raised without touching the arcade identity.

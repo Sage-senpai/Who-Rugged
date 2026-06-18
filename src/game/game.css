@@ -31,6 +31,16 @@
 .game-view .hud .b.lime { color: var(--lime); }
 .game-view .hud .home { color: var(--dim); }
 .game-view .hud .home:hover { color: var(--cyan); }
+.game-view .hud .pausebtn {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-family: var(--tiny);
+  letter-spacing: 1px;
+  padding: 4px 2px;
+}
+.game-view .hud .pausebtn:focus-visible { outline: 3px solid var(--lime); outline-offset: 2px; }
 .game-view .hud .coin {
   margin-left: auto;
   color: var(--gold);
