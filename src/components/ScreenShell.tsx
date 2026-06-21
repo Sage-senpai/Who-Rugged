@@ -4,6 +4,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { loadPlayer } from '../game/profile'
+import { ConnectButton } from '../wallet/ConnectButton'
 
 interface Props {
   /** Omit to render only the HUD and let children own the layout (the menu). */
@@ -40,7 +41,9 @@ export function ScreenShell({ title, sub, back, children, showStats = true }: Pr
           <Link className="home" to="/">
             ◀ SITE
           </Link>
-          <span className="coin">◉ INSERT COIN</span>
+          <span className="hud-wallet">
+            <ConnectButton />
+          </span>
         </div>
       </header>
 

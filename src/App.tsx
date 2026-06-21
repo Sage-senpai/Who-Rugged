@@ -4,6 +4,7 @@ import { Crt } from './components/Crt'
 import { RouteFallback } from './components/RouteFallback'
 import { MusicDirector } from './components/MusicDirector'
 import { SettingsProvider } from './settings/SettingsContext'
+import { WalletProvider } from './wallet/WalletContext'
 
 // Route-level code splitting: the landing no longer ships the game engine and
 // DiceBear, and each screen loads on demand.
@@ -12,27 +13,31 @@ const Menu = lazy(() => import('./menu/Menu').then((m) => ({ default: m.Menu }))
 const HowToPlay = lazy(() => import('./menu/HowToPlay').then((m) => ({ default: m.HowToPlay })))
 const Settings = lazy(() => import('./menu/Settings').then((m) => ({ default: m.Settings })))
 const Stats = lazy(() => import('./menu/Stats').then((m) => ({ default: m.Stats })))
+const Profile = lazy(() => import('./menu/Profile').then((m) => ({ default: m.Profile })))
 const Game = lazy(() => import('./game/Game').then((m) => ({ default: m.Game })))
 
 export default function App() {
   return (
     <SettingsProvider>
-      <a className="skip-link" href="#main">
-        Skip to content
-      </a>
-      <Crt />
-      <MusicDirector />
-      <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/menu" element={<Menu />} />
-          <Route path="/how" element={<HowToPlay />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/stats" element={<Stats />} />
-          <Route path="/play" element={<Game />} />
-          <Route path="*" element={<Landing />} />
-        </Routes>
-      </Suspense>
+      <WalletProvider>
+        <a className="skip-link" href="#main">
+          Skip to content
+        </a>
+        <Crt />
+        <MusicDirector />
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/menu" element={<Menu />} />
+            <Route path="/how" element={<HowToPlay />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/stats" element={<Stats />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/play" element={<Game />} />
+            <Route path="*" element={<Landing />} />
+          </Routes>
+        </Suspense>
+      </WalletProvider>
     </SettingsProvider>
   )
 }

@@ -14,6 +14,19 @@ Planned, in build order. See `MASTER_BUILD_PROMPT.md`.
 - Rank ladder with Undercover Cop unlock at 1200, then Two Thieves at 1400.
 - Courtroom mini-screen on a wrong bust, where the Lawyer profession boosts damages.
 
+## [0.10.0] - 2026-06-18
+
+Wallet and identity. The first step toward multiplayer: link a wallet, claim an ID, hold a testnet balance.
+
+### Added
+- Wallet connect over the injected EIP-1193 provider (MetaMask et al.) with auto-reconnect, account and network change handling, and a clean disconnect that persists across reloads. ethers v6 is dynamically imported, so screens that never touch the wallet do not pay for its weight.
+- A Profile screen at `/profile`: a deterministic avatar from your address, an editable username, your full address shown as the canonical ID with copy, the testnet network badge with a one-click "Switch to 0G" when on the wrong chain, your testnet balance with refresh, a faucet link to get testnet 0G, and an explorer link.
+- A Connect control in the screen HUD: connect when off, your name with a network-status dot when on, linking to the profile.
+- 0G Galileo testnet network config (chain id 16602, RPC, symbol, explorer, faucet) from the official docs, all overridable via `.env` so mainnet is a config change. Testnet only for v1.
+
+### Notes
+- Identity is the wallet address; a username is a local display name for now. A global username registry and adding friends by ID arrive with the multiplayer backend (planned on Cloudflare Durable Objects).
+
 ## [0.9.0] - 2026-06-18
 
 A clock and a buzzer. The case now has a hard time limit, and running out of scans is called out loud.

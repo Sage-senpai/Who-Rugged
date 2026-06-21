@@ -12,6 +12,9 @@ build/
 # 0G agent skills (cloned in, not vendored)
 .0g-skills/
 
+# internal working notes (not for the public repo)
+docs/PARTNER_QA.md
+
 # secrets and environment
 .env
 .env.*

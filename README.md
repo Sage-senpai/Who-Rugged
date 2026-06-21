@@ -35,7 +35,9 @@ who-rugged/
       Game.tsx  SuspectCard.tsx  VerdictModal.tsx  PauseOverlay.tsx
       useGame.ts  mockEngine.ts  profile.ts  data.ts  game.css
     menu/
-      Menu.tsx  HowToPlay.tsx  Settings.tsx  Stats.tsx  menu.css
+      Menu.tsx  HowToPlay.tsx  Settings.tsx  Stats.tsx  Profile.tsx  menu.css
+    wallet/
+      WalletContext.tsx  ConnectButton.tsx  chain.ts  identity.ts
     landing/
       Landing.tsx  Lineup.tsx  landing.css
   blueprints/

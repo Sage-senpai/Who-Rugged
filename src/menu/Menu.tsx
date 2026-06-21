@@ -7,6 +7,7 @@ const ITEMS = [
   { to: '/play', glyph: '▶', label: 'Play', desc: 'Open a fresh case. One thief, one shot.', primary: true },
   { to: '/how', glyph: '?', label: 'How to Play', desc: 'The rules, the bait economy, the controls.' },
   { to: '/stats', glyph: '★', label: 'Stats', desc: 'Your rank, record, and recent cases.' },
+  { to: '/profile', glyph: '◇', label: 'Profile', desc: 'Link a wallet, claim your ID, get testnet 0G.' },
   { to: '/settings', glyph: '⚙', label: 'Settings', desc: 'Sound, scanlines, motion, progress.' },
 ]
 
