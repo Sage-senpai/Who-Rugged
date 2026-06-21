@@ -14,6 +14,19 @@ Planned, in build order. See `MASTER_BUILD_PROMPT.md`.
 - Rank ladder with Undercover Cop unlock at 1200, then Two Thieves at 1400.
 - Courtroom mini-screen on a wrong bust, where the Lawyer profession boosts damages.
 
+## [0.11.0] - 2026-06-21
+
+A second mode: the Crowdfunding Courtroom. The table votes, and the most accused goes on trial.
+
+### Added
+- Crowdfunding Courtroom at `/court`: backers pool a vault, one seat drained it, and the room runs discussion rounds where every AI suspect makes a statement and points a finger at someone. You read the cross-accusation graph, spend a press budget for attested suspicion reads, then the room votes (your vote plus the AI seats). The top-voted goes to the courtroom and the pot settles. This is the multiplayer template, built vs AI first, with AI filling every seat.
+- Win and loss states themed to the crowdfund: convict the thief and the pot is recovered with a backer reward; convict an innocent and they sue the fund (a Lawyer boosts damages); a split vote means no conviction and the thief walks with the pot.
+- New engine `courtEngine` behind a `CourtEngine` seam: seal roles, generate per-round statements and accusations, press reads, tally the room's votes, and resolve, each annotated with the 0G call that replaces it. Difficulty tunes the press budget, read noise, and how strongly innocents point at the real thief.
+- Reuses the courtroom overlay, verdict modal, pause, mood-driven faces, difficulty, sound, and music. Rank and balance are shared with the solo mode.
+
+### Notes
+- Single-player vs AI for now. Real human seats drop into the same shapes once the Cloudflare Durable Objects lobby lands; AI continues to backfill empty seats.
+
 ## [0.10.0] - 2026-06-18
 
 Wallet and identity. The first step toward multiplayer: link a wallet, claim an ID, hold a testnet balance.

@@ -4,7 +4,8 @@ import { sfx } from '../lib/sfx'
 import './menu.css'
 
 const ITEMS = [
-  { to: '/play', glyph: '▶', label: 'Play', desc: 'Open a fresh case. One thief, one shot.', primary: true },
+  { to: '/play', glyph: '▶', label: 'Play', desc: 'Solo case. You are the cop, one thief, one shot.', primary: true },
+  { to: '/court', glyph: '⚖', label: 'Crowdfunding Courtroom', desc: 'The table votes. Convict the thief, save the pot.' },
   { to: '/how', glyph: '?', label: 'How to Play', desc: 'The rules, the bait economy, the controls.' },
   { to: '/stats', glyph: '★', label: 'Stats', desc: 'Your rank, record, and recent cases.' },
   { to: '/profile', glyph: '◇', label: 'Profile', desc: 'Link a wallet, claim your ID, get testnet 0G.' },

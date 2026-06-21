@@ -11,6 +11,7 @@ function trackFor(pathname: string): TrackName {
   if (pathname.startsWith('/settings')) return 'settings'
   if (pathname.startsWith('/stats')) return 'stats'
   if (pathname.startsWith('/play')) return 'play'
+  if (pathname.startsWith('/court')) return 'play'
   return 'attract'
 }
 

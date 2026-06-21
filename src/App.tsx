@@ -15,6 +15,7 @@ const Settings = lazy(() => import('./menu/Settings').then((m) => ({ default: m.
 const Stats = lazy(() => import('./menu/Stats').then((m) => ({ default: m.Stats })))
 const Profile = lazy(() => import('./menu/Profile').then((m) => ({ default: m.Profile })))
 const Game = lazy(() => import('./game/Game').then((m) => ({ default: m.Game })))
+const Court = lazy(() => import('./court/Court').then((m) => ({ default: m.Court })))
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/stats" element={<Stats />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/play" element={<Game />} />
+            <Route path="/court" element={<Court />} />
             <Route path="*" element={<Landing />} />
           </Routes>
         </Suspense>
