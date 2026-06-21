@@ -14,6 +14,22 @@ Planned, in build order. See `MASTER_BUILD_PROMPT.md`.
 - Rank ladder with Undercover Cop unlock at 1200, then Two Thieves at 1400.
 - Courtroom mini-screen on a wrong bust, where the Lawyer profession boosts damages.
 
+## [0.14.0] - 2026-06-22
+
+0G Compute wired. The solo case can now seal roles server-side and run the AI suspects through 0G Compute.
+
+### Added
+- A `CaseSeal` Durable Object in `server/` that assigns and holds the roles server-side, generates all five suspect statements from those sealed roles in one 0G Compute call, and serves privacy-preserving suspicion reads per probe. Roles are revealed only at `/case/resolve`, so the browser never holds the answer mid-game. Uses the OpenAI-compatible 0G Compute direct API; the seal attestation comes from the compute response.
+- A client `computeEngine` implementing the same `GameEngine` interface. When `VITE_COMPUTE_URL` is set the solo game uses it; otherwise it stays fully local on the mock. The case brief shows whether the AI is `0G COMPUTE` or `LOCAL`.
+- Shared `buildVerdict` / `buildTimeoutVerdict` so the mock and the compute engine produce identical ledgers, rank changes, and courtroom defenses from whoever sealed the roles.
+
+### Changed
+- The reveal now folds server-revealed roles into the suspects at settle time, so the THIEF / CLEAR marks and per-suspect attestations work whether roles were sealed locally or by the server.
+- `mockEngine` slimmed to call the shared verdict builder.
+
+### Notes
+- The compute key lives only in `server/.dev.vars` or as a Wrangler secret, never in the client bundle or git. The direct API is mainnet and bills real credits per call. Networked Courtroom rounds across seats are the next slice.
+
 ## [0.13.0] - 2026-06-22
 
 Multiplayer lobby. Real seats at the table, on Cloudflare Durable Objects.

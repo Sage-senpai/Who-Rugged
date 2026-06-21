@@ -10,15 +10,15 @@ import type {
   Difficulty,
   GameCase,
   GameEngine,
-  LedgerRow,
   PlayerProfile,
   ProbeResult,
   RoleType,
   Suspect,
   Verdict,
 } from '../lib/types'
-import { PROFESSIONS, HANDLES, STATEMENTS, TELLS, DEFENSE, LAWYER_DEFENSE } from './data'
+import { PROFESSIONS, HANDLES, STATEMENTS, TELLS } from './data'
 import { DIFFICULTY } from './difficulty'
+import { buildVerdict, buildTimeoutVerdict } from './verdict'
 import { attestation, clamp, delay, hex, pick, shuffle } from '../lib/rng'
 
 /** Base suspicion centre per role for the given difficulty. Thief and baiter
@@ -116,93 +116,12 @@ export const mockEngine: GameEngine = {
       isThief: s.isThief,
       attestation: s.attestation,
     }))
-    const replayCid = '0x' + hex(56)
-
-    const isLawyer = accused.profession === 'Lawyer'
-    let kind: Verdict['kind']
-    let title: string
-    let subtitle: string
-    let rows: LedgerRow[]
-    let delta: number
-    let eloDelta: number
-    let damages = 0
-    let lawyerBoosted = false
-    let defense = ''
-
-    if (accused.isThief) {
-      const bounty = 100 + Math.floor(Math.random() * 5) * 20
-      delta = gameCase.stolen + bounty
-      eloDelta = 22 + Math.floor(Math.random() * 8)
-      kind = 'win'
-      title = 'Conviction Secured'
-      subtitle = 'Thief identified, vault recovered'
-      rows = [
-        { label: 'Vault recovered', amount: `+${gameCase.stolen} $GG`, sign: 'pos' },
-        { label: 'State bounty', amount: `+${bounty} $GG`, sign: 'pos' },
-        { label: 'Net', amount: `+${delta} $GG`, sign: 'pos' },
-      ]
-    } else if (accused.role === 'baiter') {
-      let suit = 120 + Math.floor(Math.random() * 5) * 20
-      if (isLawyer) {
-        suit = Math.round(suit * 1.3)
-        lawyerBoosted = true
-      }
-      damages = gameCase.bond + suit
-      delta = -damages
-      eloDelta = -(28 + Math.floor(Math.random() * 8))
-      kind = 'lose'
-      title = 'You Got Baited'
-      subtitle = isLawyer
-        ? 'Wrongful bust, and the baiter was a Lawyer'
-        : 'Wrongful bust, the bait worked'
-      rows = [
-        { label: 'Bond forfeited', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
-        { label: lawyerBoosted ? 'Lawsuit damages (boosted)' : 'Lawsuit damages', amount: `-${suit} $GG`, sign: 'neg' },
-        { label: 'Thief escaped with', amount: `-${gameCase.stolen} $GG`, sign: 'neg' },
-        { label: 'Net', amount: `-${damages} $GG`, sign: 'neg' },
-      ]
-      defense = isLawyer ? pick(LAWYER_DEFENSE) : pick(DEFENSE)
-    } else {
-      const suit = isLawyer ? Math.round(gameCase.bond * 0.5) : 0
-      lawyerBoosted = isLawyer
-      damages = gameCase.bond + suit
-      delta = -damages
-      eloDelta = -(18 + Math.floor(Math.random() * 6))
-      kind = 'lose'
-      title = 'Wrongful Bust'
-      subtitle = isLawyer
-        ? 'Innocent suspect, and they lawyered up'
-        : 'Innocent suspect, the thief is still loose'
-      rows = isLawyer
-        ? [
-            { label: 'Bond forfeited', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
-            { label: 'Lawsuit damages (boosted)', amount: `-${suit} $GG`, sign: 'neg' },
-            { label: 'Thief escaped with', amount: `-${gameCase.stolen} $GG`, sign: 'neg' },
-            { label: 'Net', amount: `-${damages} $GG`, sign: 'neg' },
-          ]
-        : [
-            { label: 'Bond forfeited', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
-            { label: 'Thief escaped with', amount: `-${gameCase.stolen} $GG`, sign: 'neg' },
-            { label: 'Net', amount: `-${damages} $GG`, sign: 'neg' },
-          ]
-      defense = isLawyer ? pick(LAWYER_DEFENSE) : pick(DEFENSE)
-    }
 
     void player // reserved for memory-aware scoring once 0G Storage is wired
     return {
-      kind,
-      title,
-      subtitle,
-      rows,
-      delta,
-      eloDelta,
-      replayCid,
+      ...buildVerdict(gameCase.stolen, gameCase.bond, accused),
       reveal,
-      accusedHandle: accused.handle,
-      accusedProfession: accused.profession,
-      lawyerBoosted,
-      defense,
-      damages,
+      replayCid: '0x' + hex(56),
     }
   },
 
@@ -210,31 +129,15 @@ export const mockEngine: GameEngine = {
     // 0G: Vault.resolve(id, correct=false, accused=0x0, damages=0) -> bond forfeited
     await delay(200)
     void player
-
     const reveal = gameCase.suspects.map((s) => ({
       suspectId: s.id,
       isThief: s.isThief,
       attestation: s.attestation,
     }))
-
     return {
-      kind: 'lose',
-      title: "Time's Up",
-      subtitle: 'You ran out the clock, the thief slipped away',
-      rows: [
-        { label: 'Bond forfeited', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
-        { label: 'Thief escaped with', amount: `-${gameCase.stolen} $GG`, sign: 'neg' },
-        { label: 'Net', amount: `-${gameCase.bond} $GG`, sign: 'neg' },
-      ],
-      delta: -gameCase.bond,
-      eloDelta: -(15 + Math.floor(Math.random() * 6)),
-      replayCid: '0x' + hex(56),
+      ...buildTimeoutVerdict(gameCase.stolen, gameCase.bond),
       reveal,
-      accusedHandle: '',
-      accusedProfession: '',
-      lawyerBoosted: false,
-      defense: '',
-      damages: 0,
+      replayCid: '0x' + hex(56),
     }
   },
 }

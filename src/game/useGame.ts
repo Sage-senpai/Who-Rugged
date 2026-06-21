@@ -58,6 +58,19 @@ export function useGame(
   // useCourtroom is false for a timeout (there is no accused to put on trial).
   const settle = useCallback(
     (v: Verdict, caseId: number, useCourtroom: boolean) => {
+      // fold the reveal into the suspects so cards show the truth in both modes
+      // (the compute engine seals roles server-side, so they arrive only now)
+      setGameCase((prev) =>
+        prev
+          ? {
+              ...prev,
+              suspects: prev.suspects.map((s) => {
+                const rv = v.reveal.find((r) => r.suspectId === s.id)
+                return rv ? { ...s, isThief: rv.isThief, attestation: rv.attestation } : s
+              }),
+            }
+          : prev,
+      )
       setVerdict(v)
       setRevealed(true)
       setStatus('resolved')

@@ -50,6 +50,44 @@ Server to client: `{ type: "state", room }` on every change, where `room` is
 npm run dev   # wrangler dev, then VITE_LOBBY_URL=ws://localhost:8787
 ```
 
+## 0G Compute (sealed solo case)
+
+The same worker also seals a solo case server-side and drives the AI suspects
+through 0G Compute, so roles never reach the browser until reveal. It uses the
+OpenAI-compatible direct API, configured by three secrets:
+
+```
+OG_COMPUTE_API_URL    e.g. https://<gateway>/v1
+OG_COMPUTE_API_KEY    app-sk-...   (consumes that account's compute credits)
+OG_COMPUTE_MODEL_ID   e.g. qwen3.6-plus
+```
+
+Local dev: put them in `server/.dev.vars` (gitignored) and run `npm run dev`.
+Production: set them as secrets, then deploy:
+
+```bash
+npx wrangler secret put OG_COMPUTE_API_URL
+npx wrangler secret put OG_COMPUTE_API_KEY
+npx wrangler secret put OG_COMPUTE_MODEL_ID
+npm run deploy
+```
+
+Then in the app root `.env`, point the client at the worker's https origin:
+
+```
+VITE_COMPUTE_URL=https://who-rugged-lobby.<your-subdomain>.workers.dev
+```
+
+Endpoints (POST JSON):
+
+- `/case/new`     `{ caseId, difficulty }` -> sealed case (no roles) + `sealAttestation`
+- `/case/probe`   `{ caseId, suspectId }`  -> `{ read, tell, attestation }` (privacy-preserving)
+- `/case/resolve` `{ caseId }`             -> `{ reveal[], roles[], sealAttestation }`
+
+With `VITE_COMPUTE_URL` unset the app runs the AI fully local (mock), so it
+always works without the server. Note the direct API is mainnet and bills real
+compute credits per call.
+
 ## Next
 
 The room layer is done. Synchronizing the actual Crowdfunding Courtroom rounds
