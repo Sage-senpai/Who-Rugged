@@ -8,8 +8,7 @@ import { CourtroomOverlay } from './CourtroomOverlay'
 import { PauseOverlay } from './PauseOverlay'
 import { Onboarding } from './Onboarding'
 import { DIFFICULTY } from './difficulty'
-import { mockEngine } from './mockEngine'
-import { computeEngine, computeConfigured } from './computeEngine'
+import { gameEngine, getAiMode, aiConfigured } from './engineSelect'
 import { useSettings } from '../settings/SettingsContext'
 import { sfx } from '../lib/sfx'
 import './game.css'
@@ -35,7 +34,7 @@ export function Game() {
 
   // the clock pauses while the game is frozen (paused or first-run onboarding)
   const frozen = paused || onboarding
-  const g = useGame(computeConfigured ? computeEngine : mockEngine, settings.difficulty, frozen)
+  const g = useGame(gameEngine, settings.difficulty, frozen)
   const { player, gameCase, status, verdict, revealed, overlay, busyScanId, error, probesLeft, secondsLeft } = g
 
   const showToast = (msg: string) => {
@@ -193,8 +192,8 @@ export function Game() {
               TIME <b>{fmtTime(secondsLeft)}</b>
             </span>
             <span>
-              AI <b style={{ color: computeConfigured ? 'var(--lime)' : 'var(--dim)' }}>
-                {computeConfigured ? '0G COMPUTE' : 'LOCAL'}
+              AI <b style={{ color: gameCase && getAiMode() === 'compute' ? 'var(--lime)' : 'var(--dim)' }}>
+                {gameCase ? (getAiMode() === 'compute' ? '0G COMPUTE' : 'LOCAL') : aiConfigured ? '0G…' : 'LOCAL'}
               </b>
             </span>
           </div>
