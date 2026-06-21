@@ -3,7 +3,9 @@ import { ScreenShell } from '../components/ScreenShell'
 import { useWallet } from '../wallet/WalletContext'
 import { OG_CHAIN, explorerAddress } from '../wallet/chain'
 import { displayName, getUsername, setUsername, shortAddress } from '../wallet/identity'
-import { spriteFor } from '../lib/avatar'
+import { playerSprite } from '../lib/avatar'
+import { loadPlayer } from '../game/profile'
+import { SKINS, getSkin, isUnlocked, setSkin, skinById } from '../cosmetics/skins'
 import { sfx } from '../lib/sfx'
 import './menu.css'
 
@@ -12,10 +14,18 @@ export function Profile() {
   const [name, setName] = useState('')
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
+  const elo = loadPlayer().elo
+  const [skinId, setSkinId] = useState(() => getSkin(elo).id)
 
   useEffect(() => {
     if (w.address) setName(getUsername(w.address))
   }, [w.address])
+
+  const pickSkin = (id: string) => {
+    setSkin(id)
+    setSkinId(id)
+    sfx.play('toggle')
+  }
 
   const copyId = async () => {
     if (!w.address) return
@@ -67,7 +77,7 @@ export function Profile() {
             <h2 className="panel-h">Identity</h2>
             <div className="prof-head">
               <div className="prof-mug">
-                <img alt="" src={spriteFor(w.address)} />
+                <img alt="" src={playerSprite(w.address, skinById(skinId))} />
               </div>
               <div>
                 <div className="prof-name">{displayName(w.address, name)}</div>
@@ -100,6 +110,32 @@ export function Profile() {
               </button>
             </div>
             <p className="panel-note">Adding friends by ID arrives with the multiplayer lobby.</p>
+          </section>
+
+          <section className="panel">
+            <h2 className="panel-h">Skin</h2>
+            <div className="skin-grid">
+              {SKINS.map((s) => {
+                const unlocked = isUnlocked(s, elo)
+                const active = s.id === skinId
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`skin-tile ${active ? 'active' : ''} ${unlocked ? '' : 'locked'}`}
+                    onClick={() => unlocked && pickSkin(s.id)}
+                    disabled={!unlocked}
+                    aria-pressed={active}
+                    title={unlocked ? s.blurb : `Unlocks at rank ${s.rank}`}
+                  >
+                    <img alt="" src={playerSprite(w.address!, s)} />
+                    <span className="skin-name">{s.name}</span>
+                    {!unlocked && <span className="skin-lock">RANK {s.rank}</span>}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="panel-note">{skinById(skinId).blurb} Unlock more by climbing the rank.</p>
           </section>
 
           <section className="panel">

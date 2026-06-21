@@ -39,6 +39,30 @@ export function spriteFor(seed: string, mood: Mood = 'calm'): string {
   return uri
 }
 
+/* The player's own avatar, with a chosen skin applied on top of the seed.
+   Kept separate from spriteFor so suspects never inherit player cosmetics. */
+export function playerSprite(
+  seed: string,
+  skin: { id: string; bg: string; glasses?: boolean; hat?: boolean },
+): string {
+  const key = `player|${seed}|${skin.id}`
+  const cached = cache.get(key)
+  if (cached) return cached
+
+  const svg = createAvatar(pixelArt, {
+    seed,
+    backgroundColor: [skin.bg],
+    radius: 0,
+    scale: 90,
+    ...(skin.glasses ? { glassesProbability: 100 } : {}),
+    ...(skin.hat ? { hatProbability: 100 } : {}),
+  }).toString()
+
+  const uri = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+  cache.set(key, uri)
+  return uri
+}
+
 /** Single-character fallback glyph if a sprite ever fails to render. */
 export function initialFor(handle: string): string {
   const m = handle.replace(/[^a-zA-Z]/g, '').slice(0, 1).toUpperCase()

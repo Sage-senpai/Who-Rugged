@@ -14,6 +14,15 @@ Planned, in build order. See `MASTER_BUILD_PROMPT.md`.
 - Rank ladder with Undercover Cop unlock at 1200, then Two Thieves at 1400.
 - Courtroom mini-screen on a wrong bust, where the Lawyer profession boosts damages.
 
+## [0.12.0] - 2026-06-21
+
+Skins. Cosmetic avatar looks, with rank-gated unlocks on the existing ladder.
+
+### Added
+- A skin picker in the Profile: six looks applied on top of your address-seeded face, so identity holds while the look changes. Four are free (Precinct, Loot, Siren, Verified), two unlock with rank and reuse the role-unlock ladder: Undercover (shades) at 1200 and Kingpin (hat) at 1400. Locked tiles show the rank needed.
+- The chosen skin shows on the Profile avatar and as a small avatar in the HUD wallet control. Selection persists on the device; on-chain cosmetic ownership comes with the cosmetics economy later.
+- `playerSprite`, a skin-aware avatar generator kept separate from suspect sprites so AI seats never inherit player cosmetics.
+
 ## [0.11.0] - 2026-06-21
 
 A second mode: the Crowdfunding Courtroom. The table votes, and the most accused goes on trial.

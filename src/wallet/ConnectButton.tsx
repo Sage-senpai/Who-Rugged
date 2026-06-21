@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom'
 import { useWallet } from './WalletContext'
 import { displayName, getUsername } from './identity'
+import { playerSprite } from '../lib/avatar'
+import { loadPlayer } from '../game/profile'
+import { getSkin } from '../cosmetics/skins'
 import { sfx } from '../lib/sfx'
 
 /* Compact wallet control for the HUD. Connect when off, link to the profile
@@ -19,6 +22,7 @@ export function ConnectButton() {
   if (status === 'connected' && address) {
     return (
       <Link className="wbtn on" to="/profile" title={rightChain ? 'Profile' : 'Wrong network'}>
+        <img className="wmug" alt="" src={playerSprite(address, getSkin(loadPlayer().elo))} />
         <span className={`wdot ${rightChain ? 'ok' : 'bad'}`} aria-hidden="true" />
         {displayName(address, getUsername(address))}
       </Link>
