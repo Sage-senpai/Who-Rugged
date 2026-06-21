@@ -14,6 +14,18 @@ Planned, in build order. See `MASTER_BUILD_PROMPT.md`.
 - Rank ladder with Undercover Cop unlock at 1200, then Two Thieves at 1400.
 - Courtroom mini-screen on a wrong bust, where the Lawyer profession boosts damages.
 
+## [0.13.0] - 2026-06-22
+
+Multiplayer lobby. Real seats at the table, on Cloudflare Durable Objects.
+
+### Added
+- A `server/` package: a Cloudflare Worker and a `LobbyRoom` Durable Object that coordinates a six-seat, turn-based room over a hibernatable WebSocket. Join by code, set ready, the host adds AI agents or starts, and any empty seat is backfilled with AI on start. Room state persists and broadcasts on every change. Deployed on your own account; it is separate from the web build.
+- A Multiplayer Lobby screen at `/lobby`: create a table or join by code, see every seat with its player, host, ready, and AI tags, ready up, add or remove AI seats as host, and start. Your wallet is your seat identity.
+- Graceful degradation: with no `VITE_LOBBY_URL` set the lobby shows a clear "server not configured" state and the rest of the game is unaffected, so the app always builds and ships without the server.
+
+### Notes
+- This is the room layer. Synchronizing the actual Crowdfunding Courtroom rounds (statements, presses, votes) across seats runs through the same Durable Object next, with 0G sealing the roles and settling the pot. AI continues to fill empty seats.
+
 ## [0.12.0] - 2026-06-21
 
 Skins. Cosmetic avatar looks, with rank-gated unlocks on the existing ladder.

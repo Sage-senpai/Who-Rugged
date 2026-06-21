@@ -36,10 +36,16 @@ who-rugged/
       useGame.ts  mockEngine.ts  profile.ts  data.ts  game.css
     menu/
       Menu.tsx  HowToPlay.tsx  Settings.tsx  Stats.tsx  Profile.tsx  menu.css
+    court/
+      Court.tsx  ParticipantCard.tsx  useCourt.ts  courtEngine.ts  court.css
     wallet/
       WalletContext.tsx  ConnectButton.tsx  chain.ts  identity.ts
+    cosmetics/skins.ts          rank-gated avatar skins
+    lobby/
+      Lobby.tsx  lobbyClient.ts  lobby.css
     landing/
       Landing.tsx  Lineup.tsx  landing.css
+  server/                       Cloudflare Worker + LobbyRoom Durable Object (deploy separately)
   blueprints/
     who-rugged-landing.html     marketing site, visual + UX blueprint (frozen)
     who-rugged-game.html        playable game blueprint (logic mocked, identity final)

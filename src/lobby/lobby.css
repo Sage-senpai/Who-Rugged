@@ -1,0 +1,41 @@
+/* Multiplayer lobby. Uses the shared .screen-view chrome from menu.css. */
+.lobby-bar { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s4); flex-wrap: wrap; margin-bottom: var(--s4); }
+.lobby-code { font-family: var(--pix); font-size: 34px; letter-spacing: 4px; color: var(--gold); line-height: 1; margin-top: 6px; }
+.lobby-status { font-family: var(--tiny); font-size: 10px; letter-spacing: 1px; color: var(--dim); }
+.lobby-started { font-family: var(--mono); font-size: 12px; color: var(--cream); background: var(--void); border: 2px solid var(--gold); padding: 12px 14px; margin-bottom: var(--s4); }
+
+.seat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--s3); }
+.seat {
+  position: relative;
+  background: var(--panel);
+  border: 3px solid var(--panel-2);
+  box-shadow: var(--sh-sm);
+  padding: 14px 10px;
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+.seat.empty { border-style: dashed; border-color: var(--line); background: var(--void-2); }
+.seat.you { border-color: var(--gold); }
+.seat-empty { font-family: var(--tiny); font-size: 9px; letter-spacing: 1px; color: var(--dim); }
+.seat-mug { width: 48px; height: 48px; border: 3px solid var(--sky); background: var(--panel-2); overflow: hidden; }
+.seat-mug img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.seat-name { font-family: var(--tiny); font-size: 9px; letter-spacing: 0.5px; color: var(--sky); text-align: center; overflow: hidden; text-overflow: ellipsis; max-width: 100%; white-space: nowrap; }
+.seat-tags { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.seat-tag { font-family: var(--tiny); font-size: 7px; letter-spacing: 1px; padding: 2px 5px; border: 1px solid currentColor; }
+.seat-tag.you { color: var(--gold); }
+.seat-tag.host { color: var(--cyan); }
+.seat-tag.ai { color: var(--dim); }
+.seat-tag.ready { color: var(--lime); }
+.seat-tag.wait { color: var(--alarm); }
+.seat-remove { position: absolute; top: 6px; right: 6px; background: none; border: 0; color: var(--alarm); font-family: var(--tiny); font-size: 10px; cursor: pointer; }
+.seat-remove:focus-visible { outline: 3px solid var(--lime); outline-offset: 2px; }
+
+.screen-view .bar { display: flex; gap: var(--s4); align-items: center; justify-content: space-between; flex-wrap: wrap; background: var(--void-2); border: 3px solid var(--panel-2); padding: 14px 16px; margin-top: var(--s4); }
+.screen-view .bar .note { font-family: var(--mono); font-size: 11.5px; color: var(--dim); max-width: 520px; }
+.screen-view .bar .bigbtn { font-family: var(--tiny); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; padding: 13px 20px; border: 3px solid var(--ink); background: var(--gold); color: var(--ink); cursor: pointer; box-shadow: var(--sh); }
+.screen-view .bar .bigbtn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+.screen-view .bar .bigbtn:focus-visible { outline: 3px solid var(--lime); outline-offset: 3px; }

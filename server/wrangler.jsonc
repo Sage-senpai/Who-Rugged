@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "who-rugged-lobby",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-04-01",
+  "durable_objects": {
+    "bindings": [{ "name": "LOBBY_ROOM", "class_name": "LobbyRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["LobbyRoom"] }],
+  "observability": { "enabled": true }
+}
