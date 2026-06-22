@@ -4,6 +4,7 @@ import { Crt } from './components/Crt'
 import { RouteFallback } from './components/RouteFallback'
 import { MusicDirector } from './components/MusicDirector'
 import { SettingsProvider } from './settings/SettingsContext'
+import { NetworkProvider } from './wallet/NetworkContext'
 import { WalletProvider } from './wallet/WalletContext'
 
 // Route-level code splitting: the landing no longer ships the game engine and
@@ -21,7 +22,8 @@ const Lobby = lazy(() => import('./lobby/Lobby').then((m) => ({ default: m.Lobby
 export default function App() {
   return (
     <SettingsProvider>
-      <WalletProvider>
+      <NetworkProvider>
+        <WalletProvider>
         <a className="skip-link" href="#main">
           Skip to content
         </a>
@@ -41,7 +43,8 @@ export default function App() {
             <Route path="*" element={<Landing />} />
           </Routes>
         </Suspense>
-      </WalletProvider>
+        </WalletProvider>
+      </NetworkProvider>
     </SettingsProvider>
   )
 }

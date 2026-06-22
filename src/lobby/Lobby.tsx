@@ -4,8 +4,8 @@ import { useWallet } from '../wallet/WalletContext'
 import { getUsername, shortAddress } from '../wallet/identity'
 import { spriteFor } from '../lib/avatar'
 import { sfx } from '../lib/sfx'
-import { LobbyClient, lobbyConfigured, randomCode } from './lobbyClient'
-import type { ConnStatus, Room, Seat } from './lobbyClient'
+import { LobbyClient, fetchOpenRooms, lobbyConfigured, randomCode } from './lobbyClient'
+import type { ConnStatus, OpenRoom, Room, Seat } from './lobbyClient'
 import './lobby.css'
 
 export function Lobby() {
@@ -73,30 +73,9 @@ export function Lobby() {
     )
   }
 
-  // ---- pre-room: create or join ----
+  // ---- pre-room: create, browse, or join ----
   if (!activeCode) {
-    return (
-      <ScreenShell title="Multiplayer Lobby" sub="Create a table or join by code. AI fills empty seats." back={{ to: '/menu', label: '◀ Menu' }} showStats={false}>
-        <section className="panel">
-          <h2 className="panel-h">New table</h2>
-          <p className="panel-note" style={{ marginTop: 0, marginBottom: 14 }}>Open a room and share the code. Up to six seats.</p>
-          <button className="bigbtn" onClick={() => { sfx.play('select'); setActiveCode(randomCode()) }}>Create table ▶</button>
-        </section>
-        <section className="panel">
-          <h2 className="panel-h">Join a table</h2>
-          <div className="prof-row">
-            <input
-              className="prof-input"
-              value={codeInput}
-              maxLength={6}
-              placeholder="ENTER CODE"
-              onChange={(e) => setCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-            />
-            <button className="seg-btn" disabled={codeInput.length < 4} onClick={() => { sfx.play('select'); setActiveCode(codeInput) }}>Join</button>
-          </div>
-        </section>
-      </ScreenShell>
-    )
+    return <LobbyPreRoom onPick={(c) => setActiveCode(c)} codeInput={codeInput} setCodeInput={setCodeInput} />
   }
 
   // ---- in a room ----
@@ -145,6 +124,69 @@ export function Lobby() {
           <button className="btn btn-ghost" onClick={leave}>Leave</button>
         </span>
       </div>
+    </ScreenShell>
+  )
+}
+
+function LobbyPreRoom({ onPick, codeInput, setCodeInput }: {
+  onPick: (code: string) => void
+  codeInput: string
+  setCodeInput: (v: string) => void
+}) {
+  const [rooms, setRooms] = useState<OpenRoom[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const refresh = async () => {
+    setLoading(true)
+    setRooms(await fetchOpenRooms())
+    setLoading(false)
+  }
+  useEffect(() => {
+    void refresh()
+  }, [])
+
+  return (
+    <ScreenShell title="Multiplayer Lobby" sub="Create a table, browse open ones, or join by code. AI fills empty seats." back={{ to: '/menu', label: '◀ Menu' }} showStats={false}>
+      <section className="panel">
+        <h2 className="panel-h">New table</h2>
+        <p className="panel-note" style={{ marginTop: 0, marginBottom: 14 }}>Open a room, it shows up for others to join. Up to six seats.</p>
+        <button className="bigbtn" onClick={() => { sfx.play('select'); onPick(randomCode()) }}>Create table ▶</button>
+      </section>
+
+      <section className="panel">
+        <div className="lobby-bar">
+          <h2 className="panel-h" style={{ margin: 0 }}>Open tables</h2>
+          <button className="seg-btn" onClick={() => void refresh()}>{loading ? 'Loading…' : 'Refresh'}</button>
+        </div>
+        {rooms.length === 0 ? (
+          <p className="empty-note">{loading ? 'Looking for open tables…' : 'No open tables right now. Create one and others can join.'}</p>
+        ) : (
+          <div>
+            {rooms.map((r) => (
+              <div className="open-row" key={r.code}>
+                <span className="or-code">{r.code}</span>
+                <span className="or-host">{r.hostName}</span>
+                <span className="or-count">{r.players}/{r.max}</span>
+                <button className="seg-btn" onClick={() => { sfx.play('select'); onPick(r.code) }}>Join</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="panel">
+        <h2 className="panel-h">Join by code</h2>
+        <div className="prof-row">
+          <input
+            className="prof-input"
+            value={codeInput}
+            maxLength={6}
+            placeholder="ENTER CODE"
+            onChange={(e) => setCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+          />
+          <button className="seg-btn" disabled={codeInput.length < 4} onClick={() => { sfx.play('select'); onPick(codeInput) }}>Join</button>
+        </div>
+      </section>
     </ScreenShell>
   )
 }

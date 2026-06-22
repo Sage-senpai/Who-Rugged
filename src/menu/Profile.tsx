@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ScreenShell } from '../components/ScreenShell'
 import { useWallet } from '../wallet/WalletContext'
-import { OG_CHAIN, explorerAddress } from '../wallet/chain'
+import { useNetwork } from '../wallet/NetworkContext'
+import { explorerAddress } from '../wallet/chain'
 import { displayName, getUsername, setUsername, shortAddress } from '../wallet/identity'
 import { playerSprite } from '../lib/avatar'
 import { loadPlayer } from '../game/profile'
@@ -11,6 +12,7 @@ import './menu.css'
 
 export function Profile() {
   const w = useWallet()
+  const net = useNetwork()
   const [name, setName] = useState('')
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -140,36 +142,62 @@ export function Profile() {
 
           <section className="panel">
             <h2 className="panel-h">Network</h2>
-            <div className="danger-row">
+            <div className="seg" role="radiogroup" aria-label="Network">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={net.networkId === 'testnet'}
+                className={`seg-btn ${net.networkId === 'testnet' ? 'active' : ''}`}
+                onClick={() => { sfx.play('toggle'); net.setNetwork('testnet') }}
+              >
+                Testnet · Free
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={net.networkId === 'mainnet'}
+                className={`seg-btn ${net.networkId === 'mainnet' ? 'active' : ''}`}
+                onClick={() => { sfx.play('toggle'); net.setNetwork('mainnet') }}
+              >
+                Mainnet · Real
+              </button>
+            </div>
+            <div className="danger-row" style={{ marginTop: 14 }}>
               <span className="dr-text">
-                <span className="net-badge">TESTNET</span> {OG_CHAIN.name}
+                <span className="net-badge">{net.chain.isTestnet ? 'TESTNET' : 'MAINNET'}</span> {net.chain.name}
               </span>
               {w.rightChain ? (
                 <span className="net-ok">● Connected</span>
               ) : (
                 <button className="btn-danger" onClick={() => void w.switchNetwork()}>
-                  Switch to 0G
+                  Switch wallet to this network
                 </button>
               )}
             </div>
+            <p className="panel-note">
+              Solo practice needs no tokens on any network. Playing with others uses the selected
+              network, so use Mainnet for real tables.
+            </p>
             {w.error && <p className="panel-note" style={{ color: 'var(--alarm)' }}>{w.error}</p>}
           </section>
 
           <section className="panel">
-            <h2 className="panel-h">Testnet balance</h2>
+            <h2 className="panel-h">{net.chain.isTestnet ? 'Testnet balance' : 'Balance'}</h2>
             <div className="prof-row">
               <span className="prof-bal">
-                {w.balance ?? '0.0000'} <b>{OG_CHAIN.currency.symbol}</b>
+                {w.balance ?? '0.0000'} <b>{net.chain.currency.symbol}</b>
               </span>
               <button className="seg-btn" onClick={() => void w.refreshBalance()}>
                 Refresh
               </button>
             </div>
             <div className="prof-links">
-              <a className="btn btn-gold" href={OG_CHAIN.faucet} target="_blank" rel="noreferrer">
-                ◇ Get testnet 0G
-              </a>
-              <a className="btn btn-ghost" href={explorerAddress(w.address)} target="_blank" rel="noreferrer">
+              {net.chain.isTestnet && net.chain.faucet && (
+                <a className="btn btn-gold" href={net.chain.faucet} target="_blank" rel="noreferrer">
+                  ◇ Get testnet 0G
+                </a>
+              )}
+              <a className="btn btn-ghost" href={explorerAddress(net.chain, w.address)} target="_blank" rel="noreferrer">
                 View on explorer
               </a>
               <button className="btn btn-ghost" onClick={w.disconnect}>

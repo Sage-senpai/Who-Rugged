@@ -22,6 +22,21 @@ export type ConnStatus = 'idle' | 'connecting' | 'open' | 'closed' | 'error'
 const RAW = import.meta.env.VITE_LOBBY_URL as string | undefined
 export const LOBBY_URL = RAW ? RAW.replace(/\/$/, '') : undefined
 export const lobbyConfigured = !!LOBBY_URL
+// HTTP origin of the same worker (ws -> http, wss -> https) for plain fetches
+export const LOBBY_HTTP = LOBBY_URL ? LOBBY_URL.replace(/^ws/, 'http') : undefined
+
+export interface OpenRoom { code: string; hostName: string; players: number; max: number }
+
+export async function fetchOpenRooms(): Promise<OpenRoom[]> {
+  if (!LOBBY_HTTP) return []
+  try {
+    const res = await fetch(`${LOBBY_HTTP}/rooms`)
+    if (!res.ok) return []
+    return (await res.json()) as OpenRoom[]
+  } catch {
+    return []
+  }
+}
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 export function randomCode(): string {

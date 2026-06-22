@@ -13,10 +13,13 @@ import { DurableObject } from 'cloudflare:workers'
 export interface Env {
   LOBBY_ROOM: DurableObjectNamespace<LobbyRoom>
   CASE_SEAL: DurableObjectNamespace<CaseSeal>
+  DIRECTORY: DurableObjectNamespace<Directory>
   OG_COMPUTE_API_URL?: string
   OG_COMPUTE_API_KEY?: string
   OG_COMPUTE_MODEL_ID?: string
 }
+
+interface RoomInfo { code: string; hostName: string; players: number; max: number; hasSpace: boolean; updatedAt: number }
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -80,6 +83,7 @@ export class LobbyRoom extends DurableObject<Env> {
     }
     await this.persist()
     this.broadcast()
+    await this.syncDirectory()
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
@@ -88,7 +92,27 @@ export class LobbyRoom extends DurableObject<Env> {
       this.leave(att.address)
       await this.persist()
       this.broadcast()
+      await this.syncDirectory()
     }
+  }
+
+  // announce the room to the public directory so people can browse and join it
+  private async syncDirectory(): Promise<void> {
+    const humans = this.room.seats.filter((s) => s.kind === 'human')
+    const dir = this.env.DIRECTORY.getByName('global')
+    if (this.room.status !== 'lobby' || humans.length === 0) {
+      await dir.remove(this.room.code)
+      return
+    }
+    const host = this.room.seats.find((s) => s.address === this.room.hostAddress)
+    await dir.upsert({
+      code: this.room.code,
+      hostName: host?.username || 'Host',
+      players: humans.length,
+      max: MAX_SEATS,
+      hasSpace: this.room.seats.some((s) => s.kind === 'empty'),
+      updatedAt: Date.now(),
+    })
   }
 
   private join(ws: WebSocket, address?: string, username?: string): void {
@@ -314,12 +338,44 @@ export class CaseSeal extends DurableObject<Env> {
   }
 }
 
+// ───────────────────────── room directory ─────────────────────────
+export class Directory extends DurableObject<Env> {
+  async upsert(info: RoomInfo): Promise<void> {
+    const rooms = await this.rooms()
+    rooms[info.code] = info
+    await this.ctx.storage.put('rooms', rooms)
+  }
+  async remove(code: string): Promise<void> {
+    const rooms = await this.rooms()
+    if (rooms[code]) {
+      delete rooms[code]
+      await this.ctx.storage.put('rooms', rooms)
+    }
+  }
+  async list(): Promise<RoomInfo[]> {
+    const rooms = await this.rooms()
+    const now = Date.now()
+    return Object.values(rooms)
+      .filter((r) => r.hasSpace && now - r.updatedAt < 600_000)
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, 30)
+  }
+  private async rooms(): Promise<Record<string, RoomInfo>> {
+    return (await this.ctx.storage.get<Record<string, RoomInfo>>('rooms')) ?? {}
+  }
+}
+
 // ───────────────────────── worker entry ─────────────────────────
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
 
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS })
+
+    // public room directory
+    if (url.pathname === '/rooms' && request.method === 'GET') {
+      return json(await env.DIRECTORY.getByName('global').list())
+    }
 
     // lobby websocket
     const room = url.pathname.match(/^\/room\/([A-Za-z0-9]{1,12})$/)

@@ -3,7 +3,8 @@
    never touch the wallet do not pay for it. Testnet only for v1. */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ADD_CHAIN_PARAMS, OG_CHAIN, OG_CHAIN_HEX } from './chain'
+import { addChainParams, chainHex } from './chain'
+import { useNetwork } from './NetworkContext'
 
 export type WalletStatus = 'no-wallet' | 'disconnected' | 'connecting' | 'connected'
 
@@ -31,6 +32,7 @@ function parseChainId(hex: unknown): number | null {
 }
 
 export function WalletProvider({ children }: { children: ReactNode }) {
+  const { chain } = useNetwork()
   const [status, setStatus] = useState<WalletStatus>('disconnected')
   const [address, setAddress] = useState<string | null>(null)
   const [chainId, setChainId] = useState<number | null>(null)
@@ -160,13 +162,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (!eth) return
     setError(null)
     try {
-      await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: OG_CHAIN_HEX }] })
+      await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainHex(chain.id) }] })
     } catch (e) {
       // 4902: chain not added yet, add it then it becomes current
       const code = (e as { code?: number })?.code
       if (code === 4902) {
         try {
-          await eth.request({ method: 'wallet_addEthereumChain', params: [ADD_CHAIN_PARAMS] })
+          await eth.request({ method: 'wallet_addEthereumChain', params: [addChainParams(chain)] })
         } catch {
           setError('Could not add the 0G network. Add it manually from your wallet.')
         }
@@ -174,7 +176,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setError('Network switch cancelled.')
       }
     }
-  }, [])
+  }, [chain])
 
   const value = useMemo<WalletCtx>(
     () => ({
@@ -183,13 +185,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       chainId,
       balance,
       error,
-      rightChain: chainId === OG_CHAIN.id,
+      rightChain: chainId === chain.id,
       connect,
       disconnect,
       switchNetwork,
       refreshBalance,
     }),
-    [status, address, chainId, balance, error, connect, disconnect, switchNetwork, refreshBalance],
+    [status, address, chainId, balance, error, chain, connect, disconnect, switchNetwork, refreshBalance],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

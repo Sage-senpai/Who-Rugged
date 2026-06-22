@@ -14,6 +14,21 @@ Planned, in build order. See `MASTER_BUILD_PROMPT.md`.
 - Rank ladder with Undercover Cop unlock at 1200, then Two Thieves at 1400.
 - Courtroom mini-screen on a wrong bust, where the Lawyer profession boosts damages.
 
+## [0.15.0] - 2026-06-22
+
+Dual network and room discovery, on the road to a real deploy.
+
+### Added
+- Network switching: pick Testnet (Galileo, free, faucet) or Mainnet (Aristotle, real) in the Profile. The choice persists, the wallet "Switch network" targets the selected chain, the balance and explorer links follow it, and the faucet shows only on testnet. Solo practice needs no tokens on either network; the network matters for playing with others.
+- 0G mainnet config (Aristotle, chain id 16661, RPC, explorer) alongside testnet, all overridable via `.env`.
+- Room discovery: a `Directory` Durable Object that open tables register with as their seats change. The lobby now has an "Open tables" browser, so a created room is discoverable and joinable by others without sharing a code. A worker `GET /rooms` lists open, non-full rooms.
+
+### Changed
+- Wallet now reads the active network from a `NetworkProvider`, so `rightChain`, switching, and add-chain all target whichever network is selected.
+
+### Notes
+- No smart contract is required for AI, lobby, friends, identity, or discovery. A `Vault` escrow contract is only needed when real pooled money settles on-chain (post-launch). Friends and presence are the next piece, on the same directory backend.
+
 ## [0.14.0] - 2026-06-22
 
 0G Compute wired. The solo case can now seal roles server-side and run the AI suspects through 0G Compute.
