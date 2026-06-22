@@ -7,6 +7,8 @@ import { displayName, getUsername, setUsername, shortAddress } from '../wallet/i
 import { playerSprite } from '../lib/avatar'
 import { loadPlayer } from '../game/profile'
 import { SKINS, getSkin, isUnlocked, setSkin, skinById } from '../cosmetics/skins'
+import { listFriends, ping, requestFriend, respondFriend, socialConfigured } from '../social/socialClient'
+import type { FriendRec, Named } from '../social/socialClient'
 import { sfx } from '../lib/sfx'
 import './menu.css'
 
@@ -140,6 +142,8 @@ export function Profile() {
             <p className="panel-note">{skinById(skinId).blurb} Unlock more by climbing the rank.</p>
           </section>
 
+          <FriendsPanel address={w.address} />
+
           <section className="panel">
             <h2 className="panel-h">Network</h2>
             <div className="seg" role="radiogroup" aria-label="Network">
@@ -208,5 +212,114 @@ export function Profile() {
         </>
       )}
     </ScreenShell>
+  )
+}
+
+function FriendsPanel({ address }: { address: string }) {
+  const [rec, setRec] = useState<FriendRec>({ friends: [], incoming: [], outgoing: [] })
+  const [online, setOnline] = useState<Named[]>([])
+  const [addr, setAddr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const myName = getUsername(address) || shortAddress(address)
+
+  const load = async () => {
+    setRec(await listFriends(address))
+    setOnline((await ping(address, myName)).online)
+  }
+  useEffect(() => {
+    void load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address])
+
+  const add = async (to: string) => {
+    const target = to.trim()
+    if (!target || target.toLowerCase() === address.toLowerCase()) return
+    setBusy(true)
+    await requestFriend(address, myName, target)
+    setAddr('')
+    await load()
+    setBusy(false)
+    sfx.play('select')
+  }
+  const respond = async (requester: string, accept: boolean) => {
+    setBusy(true)
+    await respondFriend(requester, address, accept, myName)
+    await load()
+    setBusy(false)
+    sfx.play('toggle')
+  }
+
+  if (!socialConfigured) {
+    return (
+      <section className="panel">
+        <h2 className="panel-h">Friends</h2>
+        <p className="panel-note" style={{ marginTop: 0 }}>
+          Deploy the lobby worker and set <code>VITE_LOBBY_URL</code> to add friends and see who is
+          online.
+        </p>
+      </section>
+    )
+  }
+
+  const onlineAddrs = new Set(online.map((o) => o.addr.toLowerCase()))
+  const friendAddrs = new Set(rec.friends.map((f) => f.addr.toLowerCase()))
+  const others = online.filter(
+    (o) => o.addr.toLowerCase() !== address.toLowerCase() && !friendAddrs.has(o.addr.toLowerCase()),
+  )
+
+  return (
+    <section className="panel">
+      <div className="lobby-bar">
+        <h2 className="panel-h" style={{ margin: 0 }}>Friends</h2>
+        <button className="seg-btn" onClick={() => void load()}>Refresh</button>
+      </div>
+
+      <label className="prof-label">Add by ID (wallet address)</label>
+      <div className="prof-row">
+        <input className="prof-input" value={addr} placeholder="0x..." onChange={(e) => setAddr(e.target.value)} />
+        <button className="seg-btn" disabled={busy || addr.trim().length < 6} onClick={() => void add(addr)}>Add</button>
+      </div>
+
+      {rec.incoming.length > 0 && (
+        <>
+          <label className="prof-label">Requests</label>
+          {rec.incoming.map((r) => (
+            <div className="friend-row" key={r.addr}>
+              <span className="fr-name">{r.name || shortAddress(r.addr)}</span>
+              <span style={{ display: 'flex', gap: 6 }}>
+                <button className="seg-btn" disabled={busy} onClick={() => void respond(r.addr, true)}>Accept</button>
+                <button className="btn-danger" disabled={busy} onClick={() => void respond(r.addr, false)}>✕</button>
+              </span>
+            </div>
+          ))}
+        </>
+      )}
+
+      <label className="prof-label">Your friends ({rec.friends.length})</label>
+      {rec.friends.length === 0 ? (
+        <p className="empty-note">No friends yet. Add someone by their ID, or from who is online below.</p>
+      ) : (
+        rec.friends.map((f) => (
+          <div className="friend-row" key={f.addr}>
+            <span className={`wdot ${onlineAddrs.has(f.addr.toLowerCase()) ? 'ok' : 'off'}`} />
+            <span className="fr-name">{f.name || shortAddress(f.addr)}</span>
+            <span className="fr-addr">{shortAddress(f.addr)}</span>
+          </div>
+        ))
+      )}
+
+      <label className="prof-label">Online now ({others.length})</label>
+      {others.length === 0 ? (
+        <p className="empty-note">Nobody else online right now.</p>
+      ) : (
+        others.map((o) => (
+          <div className="friend-row" key={o.addr}>
+            <span className="wdot ok" />
+            <span className="fr-name">{o.name || shortAddress(o.addr)}</span>
+            <button className="seg-btn" disabled={busy} onClick={() => void add(o.addr)}>Add</button>
+          </div>
+        ))
+      )}
+    </section>
   )
 }

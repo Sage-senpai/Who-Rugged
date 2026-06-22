@@ -20,6 +20,11 @@ export interface Env {
 }
 
 interface RoomInfo { code: string; hostName: string; players: number; max: number; hasSpace: boolean; updatedAt: number }
+interface Named { addr: string; name: string }
+interface FriendRec { friends: Named[]; incoming: Named[]; outgoing: string[] }
+interface Presence { name: string; lastSeen: number }
+const emptyFriendRec = (): FriendRec => ({ friends: [], incoming: [], outgoing: [] })
+const ONLINE_MS = 60_000
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -363,6 +368,59 @@ export class Directory extends DurableObject<Env> {
   private async rooms(): Promise<Record<string, RoomInfo>> {
     return (await this.ctx.storage.get<Record<string, RoomInfo>>('rooms')) ?? {}
   }
+
+  // ── friends ──
+  async friendRequest(from: string, fromName: string, to: string): Promise<void> {
+    if (!from || !to || from === to) return
+    const g = await this.graph()
+    const t = (g[to] ??= emptyFriendRec())
+    const s = (g[from] ??= emptyFriendRec())
+    if (t.friends.some((x) => x.addr === from)) return // already friends
+    if (!t.incoming.some((x) => x.addr === from)) t.incoming.push({ addr: from, name: fromName })
+    if (!s.outgoing.includes(to)) s.outgoing.push(to)
+    await this.ctx.storage.put('friends', g)
+  }
+  async friendRespond(requester: string, responder: string, accept: boolean, responderName: string): Promise<void> {
+    const g = await this.graph()
+    const me = (g[responder] ??= emptyFriendRec())
+    const them = (g[requester] ??= emptyFriendRec())
+    const reqEntry = me.incoming.find((x) => x.addr === requester)
+    me.incoming = me.incoming.filter((x) => x.addr !== requester)
+    them.outgoing = them.outgoing.filter((a) => a !== responder)
+    if (accept && reqEntry) {
+      if (!me.friends.some((x) => x.addr === requester)) me.friends.push({ addr: requester, name: reqEntry.name })
+      if (!them.friends.some((x) => x.addr === responder)) them.friends.push({ addr: responder, name: responderName })
+    }
+    await this.ctx.storage.put('friends', g)
+  }
+  async friendList(address: string): Promise<FriendRec> {
+    const g = await this.graph()
+    return g[address] ?? emptyFriendRec()
+  }
+  private async graph(): Promise<Record<string, FriendRec>> {
+    return (await this.ctx.storage.get<Record<string, FriendRec>>('friends')) ?? {}
+  }
+
+  // ── presence ──
+  async ping(address: string, name: string): Promise<Named[]> {
+    if (address) {
+      const p = await this.presenceMap()
+      p[address] = { name, lastSeen: Date.now() }
+      await this.ctx.storage.put('presence', p)
+    }
+    return this.online()
+  }
+  async online(): Promise<Named[]> {
+    const p = await this.presenceMap()
+    const now = Date.now()
+    return Object.entries(p)
+      .filter(([, v]) => now - v.lastSeen < ONLINE_MS)
+      .map(([addr, v]) => ({ addr, name: v.name }))
+      .slice(0, 50)
+  }
+  private async presenceMap(): Promise<Record<string, Presence>> {
+    return (await this.ctx.storage.get<Record<string, Presence>>('presence')) ?? {}
+  }
 }
 
 // ───────────────────────── worker entry ─────────────────────────
@@ -375,6 +433,31 @@ export default {
     // public room directory
     if (url.pathname === '/rooms' && request.method === 'GET') {
       return json(await env.DIRECTORY.getByName('global').list())
+    }
+
+    // friends + presence (single global social hub for v1)
+    if ((url.pathname.startsWith('/friends/') || url.pathname.startsWith('/presence/')) && request.method === 'POST') {
+      let b: { from?: string; fromName?: string; to?: string; requester?: string; responder?: string; responderName?: string; accept?: boolean; address?: string; name?: string }
+      try {
+        b = (await request.json()) as typeof b
+      } catch {
+        return json({ error: 'bad-json' }, 400)
+      }
+      const dir = env.DIRECTORY.getByName('global')
+      switch (url.pathname) {
+        case '/friends/request':
+          await dir.friendRequest(b.from ?? '', b.fromName ?? '', b.to ?? '')
+          return json({ ok: true })
+        case '/friends/respond':
+          await dir.friendRespond(b.requester ?? '', b.responder ?? '', !!b.accept, b.responderName ?? '')
+          return json({ ok: true })
+        case '/friends/list':
+          return json(await dir.friendList(b.address ?? ''))
+        case '/presence/ping':
+          return json({ online: await dir.ping(b.address ?? '', b.name ?? '') })
+        default:
+          return json({ error: 'not-found' }, 404)
+      }
     }
 
     // lobby websocket

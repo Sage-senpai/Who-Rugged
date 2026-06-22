@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom'
 import { Crt } from './components/Crt'
 import { RouteFallback } from './components/RouteFallback'
 import { MusicDirector } from './components/MusicDirector'
+import { PresenceBeacon } from './social/PresenceBeacon'
 import { SettingsProvider } from './settings/SettingsContext'
 import { NetworkProvider } from './wallet/NetworkContext'
 import { WalletProvider } from './wallet/WalletContext'
@@ -29,6 +30,7 @@ export default function App() {
         </a>
         <Crt />
         <MusicDirector />
+        <PresenceBeacon />
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<Landing />} />

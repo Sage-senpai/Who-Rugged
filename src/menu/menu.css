@@ -209,6 +209,13 @@
 .wdot { width: 8px; height: 8px; display: inline-block; }
 .wdot.ok { background: var(--lime); }
 .wdot.bad { background: var(--alarm); animation: blink 0.8s steps(2) infinite; }
+.wdot.off { background: var(--line); }
+
+/* friends */
+.friend-row { display: flex; align-items: center; gap: var(--s3); padding: 9px 2px; border-bottom: 2px solid var(--panel); font-family: var(--mono); font-size: 12px; }
+.friend-row:last-child { border-bottom: 0; }
+.friend-row .fr-name { flex: 1; color: var(--cream); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.friend-row .fr-addr { color: var(--dim); font-size: 11px; }
 
 /* profile */
 .prof-head { display: flex; align-items: center; gap: var(--s4); margin-bottom: var(--s4); }
