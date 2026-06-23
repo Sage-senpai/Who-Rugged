@@ -76,15 +76,53 @@ The originals are self-contained. Open either HTML file in a browser, or serve t
 npx serve blueprints
 ```
 
-## Wire up 0G (next layers)
+## Deploy
+
+Two artifacts: the worker (`server/`) and the static frontend (`dist/`).
+
+### 1. The worker (lobby + room directory + friends + 0G Compute)
 
 ```bash
-git clone https://github.com/0gfoundation/0g-agent-skills .0g-skills
-npm install @0glabs/0g-ts-sdk @0glabs/0g-serving-broker ethers dotenv
-cp .env.example .env     # add PRIVATE_KEY and RPC_URL, fund at faucet.0g.ai
+cd server
+npm install
+npx wrangler login
+# 0G Compute secrets (the direct API; consumes that account's credits):
+npx wrangler secret put OG_COMPUTE_API_URL
+npx wrangler secret put OG_COMPUTE_API_KEY
+npx wrangler secret put OG_COMPUTE_MODEL_ID
+npm run deploy
 ```
 
-Then implement the `GameEngine` interface in `src/lib/types.ts` against real 0G calls and swap the mock in `src/game/useGame.ts`. Build layer by layer with `docs/PROMPTS.md`. Verified endpoints, packages, and the six 0G gotchas are in `docs/BUILD_GUIDE.md`.
+Wrangler prints a URL like `https://who-rugged-lobby.<sub>.workers.dev`.
+
+### 2. Point the app at it, then build
+
+In the repo root `.env` (copy from `.env.example`), set the production worker URLs:
+
+```
+VITE_LOBBY_URL=wss://who-rugged-lobby.<sub>.workers.dev
+VITE_COMPUTE_URL=https://who-rugged-lobby.<sub>.workers.dev
+```
+
+```bash
+npm run build
+```
+
+### 3. Host the frontend (Cloudflare Pages)
+
+```bash
+npx wrangler pages deploy dist --project-name who-rugged
+```
+
+`public/_redirects` ships SPA routing so `/play`, `/lobby`, etc. resolve. Any
+static host works (Vercel, Netlify); just add an equivalent SPA fallback.
+
+### Networks
+
+Players pick Testnet (Galileo, free, faucet) or Mainnet (Aristotle, real) in the
+Profile. Solo practice needs no tokens on either. No smart contract is required
+for AI, lobby, friends, or discovery; a `Vault` escrow is only for real on-chain
+pots, which is a later layer (`docs/PROMPTS.md`, gotchas in `docs/BUILD_GUIDE.md`).
 
 ## The identity at a glance
 
