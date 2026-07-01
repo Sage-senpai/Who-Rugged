@@ -5,6 +5,7 @@ import { RouteFallback } from './components/RouteFallback'
 import { MusicDirector } from './components/MusicDirector'
 import { PresenceBeacon } from './social/PresenceBeacon'
 import { SettingsProvider } from './settings/SettingsContext'
+import { ThemeProvider } from './theme/ThemeContext'
 import { NetworkProvider } from './wallet/NetworkContext'
 import { WalletProvider } from './wallet/WalletContext'
 
@@ -19,10 +20,12 @@ const Profile = lazy(() => import('./menu/Profile').then((m) => ({ default: m.Pr
 const Game = lazy(() => import('./game/Game').then((m) => ({ default: m.Game })))
 const Court = lazy(() => import('./court/Court').then((m) => ({ default: m.Court })))
 const Lobby = lazy(() => import('./lobby/Lobby').then((m) => ({ default: m.Lobby })))
+const WhoSold = lazy(() => import('./sold/WhoSold').then((m) => ({ default: m.WhoSold })))
 
 export default function App() {
   return (
     <SettingsProvider>
+      <ThemeProvider>
       <NetworkProvider>
         <WalletProvider>
         <a className="skip-link" href="#main">
@@ -42,11 +45,13 @@ export default function App() {
             <Route path="/play" element={<Game />} />
             <Route path="/court" element={<Court />} />
             <Route path="/lobby" element={<Lobby />} />
+            <Route path="/sold" element={<WhoSold />} />
             <Route path="*" element={<Landing />} />
           </Routes>
         </Suspense>
         </WalletProvider>
       </NetworkProvider>
+      </ThemeProvider>
     </SettingsProvider>
   )
 }

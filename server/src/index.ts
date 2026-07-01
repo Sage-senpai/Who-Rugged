@@ -9,14 +9,24 @@
    0G Compute uses the OpenAI-compatible direct API (OG_COMPUTE_API_URL +
    OG_COMPUTE_API_KEY), so it runs in the Worker with a plain fetch. */
 import { DurableObject } from 'cloudflare:workers'
+import { SolanaOracle } from './sold/SolanaOracle'
+import { TRACKED_WALLETS, lookupHolder } from './sold/holderRegistry'
+import type { TrackedHolder, PredictionWindow, Prediction, Resolution, PredictorScore } from './sold/types'
+
+const ANSEM_MINT_DEFAULT = '9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump'
 
 export interface Env {
   LOBBY_ROOM: DurableObjectNamespace<LobbyRoom>
   CASE_SEAL: DurableObjectNamespace<CaseSeal>
   DIRECTORY: DurableObjectNamespace<Directory>
+  PREDICTION_POOL: DurableObjectNamespace<PredictionPool>
   OG_COMPUTE_API_URL?: string
   OG_COMPUTE_API_KEY?: string
   OG_COMPUTE_MODEL_ID?: string
+  ALCHEMY_API_KEY?: string
+  ANSEM_MINT?: string
+  SOLD_SELL_THRESHOLD?: string
+  SOLD_PREDICTION_WINDOW_HOURS?: string
 }
 
 interface RoomInfo { code: string; hostName: string; players: number; max: number; hasSpace: boolean; updatedAt: number }
@@ -423,6 +433,102 @@ export class Directory extends DurableObject<Env> {
   }
 }
 
+// ───────────────────────── prediction pool (WHO SOLD?) ─────────────────────────
+
+const SELL_THRESHOLD_DEFAULT = 0.10
+const WINDOW_HOURS_DEFAULT = 12
+
+function windowId(hours: number): string {
+  const ms = hours * 3_600_000
+  const slot = Math.floor(Date.now() / ms) * ms
+  const d = new Date(slot)
+  return `sold-${d.toISOString().slice(0, 10)}-${hours}h`
+}
+
+export class PredictionPool extends DurableObject<Env> {
+  async openWindow(wid: string, holders: TrackedHolder[], closesAt: number): Promise<PredictionWindow> {
+    const win: PredictionWindow = {
+      windowId: wid,
+      opensAt: Date.now(),
+      closesAt,
+      status: 'open',
+      holders,
+    }
+    await this.ctx.storage.put('window', win)
+    await this.ctx.storage.put('predictions', [] as Prediction[])
+    await this.ctx.storage.setAlarm(closesAt)
+    return win
+  }
+
+  async getWindow(): Promise<PredictionWindow | null> {
+    return (await this.ctx.storage.get<PredictionWindow>('window')) ?? null
+  }
+
+  async predict(predictor: string, wallet: string, vote: 'yes' | 'no', stake: number): Promise<{ ok: boolean; error?: string }> {
+    const win = await this.ctx.storage.get<PredictionWindow>('window')
+    if (!win || win.status !== 'open') return { ok: false, error: 'window-not-open' }
+    if (!win.holders.some((h) => h.wallet === wallet)) return { ok: false, error: 'unknown-wallet' }
+    const preds = (await this.ctx.storage.get<Prediction[]>('predictions')) ?? []
+    const idx = preds.findIndex((p) => p.predictor === predictor && p.wallet === wallet)
+    const entry: Prediction = { windowId: win.windowId, wallet, predictor, vote, stake, placedAt: Date.now() }
+    if (idx >= 0) preds[idx] = entry
+    else preds.push(entry)
+    await this.ctx.storage.put('predictions', preds)
+    return { ok: true }
+  }
+
+  async getPredictions(predictor?: string): Promise<Prediction[]> {
+    const preds = (await this.ctx.storage.get<Prediction[]>('predictions')) ?? []
+    return predictor ? preds.filter((p) => p.predictor === predictor) : preds
+  }
+
+  async resolveWindow(resolutions: Resolution[]): Promise<PredictorScore[]> {
+    const win = await this.ctx.storage.get<PredictionWindow>('window')
+    if (!win) return []
+    for (const r of resolutions) {
+      const h = win.holders.find((x) => x.wallet === r.wallet)
+      if (h) h.balanceNow = r.balanceAfter
+    }
+    win.status = 'settled'
+    await this.ctx.storage.put('window', win)
+    const preds = (await this.ctx.storage.get<Prediction[]>('predictions')) ?? []
+    const scoreMap: Record<string, PredictorScore> = {}
+    for (const pred of preds) {
+      const res = resolutions.find((r) => r.wallet === pred.wallet)
+      if (!res) continue
+      const correct = (pred.vote === 'yes' && res.sold) || (pred.vote === 'no' && !res.sold)
+      const sc = (scoreMap[pred.predictor] ??= { predictor: pred.predictor, correct: 0, total: 0, pointsDelta: 0 })
+      sc.total++
+      if (correct) { sc.correct++; sc.pointsDelta += pred.stake * 2 }
+      else { sc.pointsDelta -= pred.stake }
+    }
+    const scores = Object.values(scoreMap)
+    await this.ctx.storage.put('scores', scores)
+    return scores
+  }
+
+  async getLeaderboard(): Promise<PredictorScore[]> {
+    return (await this.ctx.storage.get<PredictorScore[]>('scores')) ?? []
+  }
+
+  async alarm(): Promise<void> {
+    const win = await this.ctx.storage.get<PredictionWindow>('window')
+    if (!win || win.status !== 'open') return
+    win.status = 'resolving'
+    await this.ctx.storage.put('window', win)
+    const oracle = new SolanaOracle(this.env.ALCHEMY_API_KEY, this.env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
+    const balances = await oracle.fetchCurrentBalances(win.holders.map((h) => h.wallet))
+    const threshold = parseFloat(this.env.SOLD_SELL_THRESHOLD ?? String(SELL_THRESHOLD_DEFAULT))
+    const resolutions: Resolution[] = balances.map((b) => {
+      const holder = win.holders.find((h) => h.wallet === b.wallet)
+      const before = holder?.balanceAtSnapshot ?? 0
+      const sold = before > 0 && (before - b.balance) / before > threshold
+      return { wallet: b.wallet, windowId: win.windowId, sold, balanceBefore: before, balanceAfter: b.balance, confirmedAt: Date.now() }
+    })
+    await this.resolveWindow(resolutions)
+  }
+}
+
 // ───────────────────────── worker entry ─────────────────────────
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -481,6 +587,64 @@ export default {
       } catch (e) {
         return json({ error: e instanceof Error ? e.message : 'compute-failed' }, 502)
       }
+      return json({ error: 'not-found' }, 404)
+    }
+
+    // WHO SOLD? prediction pool
+    if (url.pathname.startsWith('/sold/')) {
+      const hours = parseInt(env.SOLD_PREDICTION_WINDOW_HOURS ?? String(WINDOW_HOURS_DEFAULT))
+      const wid = windowId(hours)
+      const pool = env.PREDICTION_POOL.getByName(wid)
+
+      if (url.pathname === '/sold/window/current' && request.method === 'GET') {
+        let win = await pool.getWindow()
+        if (!win) {
+          const mint = env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT
+          const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, mint)
+          const holders = env.ALCHEMY_API_KEY && mint
+            ? await oracle.fetchTopHolders()
+            : TRACKED_WALLETS.map((wallet) => {
+                const meta = lookupHolder(wallet)
+                return { wallet, handle: meta.handle, avatarSeed: meta.avatarSeed, balanceAtSnapshot: 0, balanceNow: null } satisfies TrackedHolder
+              })
+          const closesAt = Math.floor(Date.now() / (hours * 3_600_000)) * (hours * 3_600_000) + hours * 3_600_000
+          win = await pool.openWindow(wid, holders, closesAt)
+        }
+        return json(win)
+      }
+
+      if (url.pathname === '/sold/predict' && request.method === 'POST') {
+        let b: { windowId?: string; wallet?: string; predictor?: string; vote?: string; stake?: number }
+        try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+        if (!b.wallet || !b.predictor || (b.vote !== 'yes' && b.vote !== 'no')) return json({ error: 'missing-fields' }, 400)
+        return json(await pool.predict(b.predictor, b.wallet, b.vote as 'yes' | 'no', b.stake ?? 50))
+      }
+
+      if (url.pathname === '/sold/predictions' && request.method === 'GET') {
+        const predictor = url.searchParams.get('predictor') ?? undefined
+        return json(await pool.getPredictions(predictor))
+      }
+
+      if (url.pathname === '/sold/leaderboard' && request.method === 'GET') {
+        return json(await pool.getLeaderboard())
+      }
+
+      if (url.pathname === '/sold/resolve/manual' && request.method === 'POST') {
+        // dev-only: force resolution now
+        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
+        const win = await pool.getWindow()
+        if (!win) return json({ error: 'no-window' }, 404)
+        const balances = await oracle.fetchCurrentBalances(win.holders.map((h) => h.wallet))
+        const threshold = parseFloat(env.SOLD_SELL_THRESHOLD ?? String(SELL_THRESHOLD_DEFAULT))
+        const resolutions: Resolution[] = balances.map((b) => {
+          const holder = win.holders.find((h) => h.wallet === b.wallet)
+          const before = holder?.balanceAtSnapshot ?? 0
+          const sold = before > 0 && (before - b.balance) / before > threshold
+          return { wallet: b.wallet, windowId: win.windowId, sold, balanceBefore: before, balanceAfter: b.balance, confirmedAt: Date.now() }
+        })
+        return json(await pool.resolveWindow(resolutions))
+      }
+
       return json({ error: 'not-found' }, 404)
     }
 

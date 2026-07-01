@@ -1,0 +1,209 @@
+/* WHO SOLD? screen styles. Uses the same token variables as the rest of the game. */
+
+.sold-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1rem 4rem;
+  gap: 1.5rem;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.sold-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sold-eyebrow {
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  opacity: 0.5;
+  text-transform: uppercase;
+}
+
+.sold-title {
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--alarm, #ff4560);
+}
+
+.sold-subtitle {
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+/* ── window countdown ── */
+.sold-countdown {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.sold-countdown-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lime, #39ff14);
+  animation: sold-pulse 1.4s ease-in-out infinite;
+}
+
+.sold-countdown-dot.settling {
+  background: var(--gold, #ffd700);
+}
+
+@keyframes sold-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── layout ── */
+.sold-body {
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 620px) {
+  .sold-body { grid-template-columns: 1fr; }
+}
+
+/* ── prediction card ── */
+.sold-card {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  background: var(--panel, rgba(255,255,255,0.04));
+  transition: border-color 0.15s;
+}
+
+.sold-card:hover {
+  border-color: rgba(255,255,255,0.18);
+}
+
+.sold-card.sold-card--yes  { border-left: 3px solid var(--alarm, #ff4560); }
+.sold-card.sold-card--no   { border-left: 3px solid var(--lime, #39ff14); }
+
+.sold-card-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255,255,255,0.06);
+  display: grid;
+  place-items: center;
+}
+
+.sold-card-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.sold-card-info { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.sold-card-handle { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sold-card-balance { font-size: 0.7rem; opacity: 0.5; font-variant-numeric: tabular-nums; }
+
+.sold-card-actions { display: flex; gap: 0.4rem; }
+
+.sold-btn {
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid currentColor;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s, opacity 0.12s;
+}
+
+.sold-btn:disabled { opacity: 0.35; cursor: default; }
+
+.sold-btn-yes {
+  color: var(--alarm, #ff4560);
+}
+.sold-btn-yes:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--alarm, #ff4560) 15%, transparent);
+}
+.sold-btn-yes.active {
+  background: var(--alarm, #ff4560);
+  color: #000;
+}
+
+.sold-btn-no {
+  color: var(--lime, #39ff14);
+}
+.sold-btn-no:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--lime, #39ff14) 15%, transparent);
+}
+.sold-btn-no.active {
+  background: var(--lime, #39ff14);
+  color: #000;
+}
+
+/* ── leaderboard ── */
+.sold-leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sold-leaderboard-title {
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.45;
+}
+
+.sold-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.sold-rank-pos { width: 1.2rem; opacity: 0.4; font-variant-numeric: tabular-nums; }
+.sold-rank-addr { flex: 1; font-family: monospace; font-size: 0.68rem; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sold-rank-delta { font-variant-numeric: tabular-nums; font-weight: 600; }
+.sold-rank-delta.pos { color: var(--lime, #39ff14); }
+.sold-rank-delta.neg { color: var(--alarm, #ff4560); }
+
+/* ── resolution banner ── */
+.sold-resolution {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--gold, #ffd700);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--gold, #ffd700) 8%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sold-resolution-title {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold, #ffd700);
+}
+
+.sold-resolution-body { font-size: 0.85rem; }
+
+/* ── states ── */
+.sold-loading, .sold-unconfigured {
+  display: grid;
+  place-items: center;
+  min-height: 40dvh;
+  opacity: 0.4;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+}
