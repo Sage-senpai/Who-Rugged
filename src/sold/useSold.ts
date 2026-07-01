@@ -1,7 +1,10 @@
-/* Orchestration hook for WHO SOLD? — mirrors the useGame.ts pattern. */
+/* Orchestration hook for WHO SOLD? */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PredictionWindow, Prediction, PredictorScore } from './soldTypes'
-import { getCurrentWindow, getMyPredictions, getLeaderboard, placePrediction } from './soldClient'
+import type { PredictionWindow, Prediction, PredictorScore, BatchWindow } from './soldTypes'
+import {
+  getCurrentWindow, getMyPredictions, getLeaderboard, placePrediction,
+  checkBalance, registerWallet, placeBatchPrediction,
+} from './soldClient'
 
 const POLL_MS = 30_000
 
@@ -13,6 +16,10 @@ export interface UseSoldReturn {
   myPredictions: Prediction[]
   leaderboard: PredictorScore[]
   predict: (wallet: string, vote: 'yes' | 'no', stake: number) => Promise<{ ok: boolean; error?: string }>
+  register: (wallet: string, handle: string) => Promise<{ ok: boolean; error?: string; balance?: number; eligible?: boolean; minRequired?: number }>
+  predictBatch: (batchId: string, vote: 'yes' | 'no', stake: number) => Promise<{ ok: boolean; error?: string }>
+  activeBatch: BatchWindow | null
+  setActiveBatch: (b: BatchWindow | null) => void
 }
 
 export function useSold(predictorAddress: string | null): UseSoldReturn {
@@ -20,6 +27,7 @@ export function useSold(predictorAddress: string | null): UseSoldReturn {
   const [window, setWindow] = useState<PredictionWindow | null>(null)
   const [myPredictions, setMyPredictions] = useState<Prediction[]>([])
   const [leaderboard, setLeaderboard] = useState<PredictorScore[]>([])
+  const [activeBatch, setActiveBatch] = useState<BatchWindow | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const refresh = useCallback(async () => {
@@ -42,12 +50,9 @@ export function useSold(predictorAddress: string | null): UseSoldReturn {
   useEffect(() => {
     const VITE_SOLD_URL = import.meta.env.VITE_SOLD_URL as string | undefined
     if (!VITE_SOLD_URL) { setStatus('unconfigured'); return }
-
     void refresh()
     pollRef.current = setInterval(() => { void refresh() }, POLL_MS)
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current)
-    }
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [refresh])
 
   const predict = useCallback(
@@ -56,7 +61,7 @@ export function useSold(predictorAddress: string | null): UseSoldReturn {
       const result = await placePrediction(window.windowId, wallet, predictorAddress, vote, stake)
       if (result.ok) {
         setMyPredictions((prev) => {
-          const next = prev.filter((p) => !(p.wallet === wallet))
+          const next = prev.filter((p) => p.wallet !== wallet)
           return [...next, { windowId: window.windowId, wallet, predictor: predictorAddress, vote, stake, placedAt: Date.now() }]
         })
       }
@@ -65,5 +70,30 @@ export function useSold(predictorAddress: string | null): UseSoldReturn {
     [predictorAddress, window],
   )
 
-  return { status, window, myPredictions, leaderboard, predict }
+  const register = useCallback(
+    async (wallet: string, handle: string) => {
+      // first check balance
+      const check = await checkBalance(wallet)
+      if (!check) return { ok: false, error: 'oracle-unavailable' }
+      if (!check.eligible) return { ok: false, error: 'insufficient-balance', balance: check.balance, minRequired: check.minRequired }
+      // commit registration
+      const result = await registerWallet(wallet, handle, predictorAddress ?? '')
+      return { ...result, balance: check.balance, eligible: check.eligible, minRequired: check.minRequired }
+    },
+    [predictorAddress],
+  )
+
+  const predictBatch = useCallback(
+    async (batchId: string, vote: 'yes' | 'no', stake: number) => {
+      if (!predictorAddress) return { ok: false, error: 'not-connected' }
+      const result = await placeBatchPrediction(batchId, predictorAddress, vote, stake)
+      if (result.ok) {
+        setActiveBatch((prev) => prev ? { ...prev } : prev) // trigger re-render
+      }
+      return result
+    },
+    [predictorAddress],
+  )
+
+  return { status, window, myPredictions, leaderboard, predict, register, predictBatch, activeBatch, setActiveBatch }
 }

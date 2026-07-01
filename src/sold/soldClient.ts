@@ -1,6 +1,6 @@
 /* HTTP client for the WHO SOLD? Worker routes.
    Env-gated: with no VITE_SOLD_URL configured these are silent no-ops. */
-import type { PredictionWindow, Prediction, PredictorScore } from './soldTypes'
+import type { PredictionWindow, Prediction, PredictorScore, RegisteredHolder, BatchWindow } from './soldTypes'
 
 const RAW = import.meta.env.VITE_SOLD_URL as string | undefined
 export const SOLD_URL = RAW ? RAW.replace(/\/$/, '') : undefined
@@ -25,12 +25,16 @@ async function post<T>(path: string, body: object, fallback: T): Promise<T> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    if (!res.ok) return fallback
+    if (!res.ok) {
+      try { return (await res.json()) as T } catch { return fallback }
+    }
     return (await res.json()) as T
   } catch {
     return fallback
   }
 }
+
+// ── individual window ──────────────────────────────────────────────────────────
 
 export const getCurrentWindow = () =>
   get<PredictionWindow | null>('/sold/window/current', null)
@@ -51,5 +55,40 @@ export const placePrediction = (
   post<{ ok: boolean; error?: string }>(
     '/sold/predict',
     { windowId, wallet, predictor, vote, stake },
+    { ok: false, error: 'not-configured' },
+  )
+
+// ── registration ───────────────────────────────────────────────────────────────
+
+export const checkBalance = (wallet: string) =>
+  get<{ wallet: string; balance: number; minRequired: number; eligible: boolean } | null>(
+    `/sold/balance?wallet=${encodeURIComponent(wallet)}`,
+    null,
+  )
+
+export const registerWallet = (wallet: string, handle: string, registeredBy: string) =>
+  post<{ ok: boolean; error?: string; balance?: number; handle?: string; alreadyRegistered?: boolean }>(
+    '/sold/register',
+    { wallet, handle, registeredBy },
+    { ok: false, error: 'not-configured' },
+  )
+
+export const getRegisteredHolders = () =>
+  get<RegisteredHolder[]>('/sold/registered', [])
+
+// ── batch windows ──────────────────────────────────────────────────────────────
+
+export const getBatch = (batchId: string) =>
+  get<BatchWindow | null>(`/sold/batch/${encodeURIComponent(batchId)}`, null)
+
+export const placeBatchPrediction = (
+  batchId: string,
+  predictor: string,
+  vote: 'yes' | 'no',
+  stake: number,
+) =>
+  post<{ ok: boolean; error?: string }>(
+    `/sold/batch/${encodeURIComponent(batchId)}/predict`,
+    { predictor, vote, stake },
     { ok: false, error: 'not-configured' },
   )

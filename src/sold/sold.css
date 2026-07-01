@@ -207,3 +207,238 @@
   font-size: 0.8rem;
   letter-spacing: 0.06em;
 }
+
+/* ── tabs ── */
+.sold-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding-bottom: 0;
+}
+
+.sold-tab {
+  padding: 0.45rem 1rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: inherit;
+  opacity: 0.4;
+  cursor: pointer;
+  transition: opacity 0.12s, border-color 0.12s;
+  margin-bottom: -1px;
+}
+
+.sold-tab:hover { opacity: 0.7; }
+.sold-tab.active { opacity: 1; border-bottom-color: var(--alarm, #ff4560); }
+
+/* ── registration ── */
+.sold-register-wrap {
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sold-register-desc {
+  font-size: 0.82rem;
+  opacity: 0.65;
+  line-height: 1.5;
+}
+
+.sold-register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sold-register-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  opacity: 0.7;
+  letter-spacing: 0.04em;
+}
+
+.sold-register-optional { opacity: 0.5; }
+
+.sold-register-input {
+  padding: 0.55rem 0.75rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 4px;
+  color: inherit;
+  font-family: monospace;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.sold-register-input:focus { border-color: rgba(255,255,255,0.3); }
+.sold-register-input:disabled { opacity: 0.5; }
+
+.sold-register-submit {
+  align-self: flex-start;
+  padding: 0.45rem 1.25rem;
+  background: var(--alarm, #ff4560);
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.sold-register-submit:disabled { opacity: 0.4; cursor: default; }
+
+.sold-register-status {
+  font-size: 0.78rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.sold-register-status--success { border-color: var(--lime, #39ff14); color: var(--lime, #39ff14); }
+.sold-register-status--error   { border-color: var(--alarm, #ff4560); color: var(--alarm, #ff4560); }
+.sold-register-balance { opacity: 0.8; }
+
+.sold-register-notice {
+  font-size: 0.8rem;
+  opacity: 0.5;
+  padding: 1rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.sold-register-note {
+  font-size: 0.68rem;
+  opacity: 0.4;
+  line-height: 1.5;
+}
+
+/* ── batch cards ── */
+.sold-batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sold-batch-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  opacity: 0.45;
+  font-size: 0.82rem;
+}
+
+.sold-batch-empty-sub {
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  opacity: 0.7;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.sold-batch-card {
+  padding: 1.25rem;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  background: var(--panel, rgba(255,255,255,0.04));
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sold-batch-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.sold-batch-eyebrow {
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  opacity: 0.45;
+}
+
+.sold-batch-label {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0.15rem 0 0;
+}
+
+.sold-batch-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  font-size: 0.68rem;
+  opacity: 0.5;
+}
+
+.sold-batch-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.sold-batch-timer { font-variant-numeric: tabular-nums; }
+
+/* parimutuel odds */
+.sold-batch-odds {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sold-batch-odds-bar {
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+  background: rgba(255,255,255,0.06);
+}
+
+.sold-batch-odds-fill--yes { background: var(--alarm, #ff4560); transition: width 0.4s; }
+.sold-batch-odds-fill--no  { background: var(--lime, #39ff14); transition: width 0.4s; }
+
+.sold-batch-odds-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.sold-batch-odds-label--yes { color: var(--alarm, #ff4560); }
+.sold-batch-odds-label--no  { color: var(--lime, #39ff14); }
+
+/* settled result */
+.sold-batch-result {
+  padding: 0.6rem 0.875rem;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.sold-batch-result--yes { background: color-mix(in srgb, var(--alarm, #ff4560) 12%, transparent); border: 1px solid var(--alarm, #ff4560); }
+.sold-batch-result--no  { background: color-mix(in srgb, var(--lime, #39ff14) 12%, transparent); border: 1px solid var(--lime, #39ff14); }
+
+.sold-batch-result-label { font-weight: 700; letter-spacing: 0.05em; }
+.sold-batch-result-stat  { opacity: 0.7; font-variant-numeric: tabular-nums; }
+
+.sold-batch-my-vote {
+  font-size: 0.68rem;
+  opacity: 0.45;
+  margin-top: -0.25rem;
+}

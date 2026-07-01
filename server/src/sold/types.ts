@@ -42,3 +42,38 @@ export interface PredictorScore {
   total: number
   pointsDelta: number
 }
+
+export interface RegisteredHolder {
+  wallet: string
+  handle: string
+  balanceAtReg: number
+  registeredAt: number
+  registeredBy: string
+}
+
+export interface BatchWindow {
+  batchId: string
+  label: string
+  wallets: string[]
+  walletBalances: Record<string, number>
+  threshold: number
+  opensAt: number
+  closesAt: number
+  status: WindowStatus
+  result?: BatchResult
+}
+
+export interface BatchResult {
+  sellersCount: number
+  total: number
+  pct: number
+  exceeded: boolean
+}
+
+export interface BatchPrediction {
+  batchId: string
+  predictor: string
+  vote: 'yes' | 'no'
+  stake: number
+  placedAt: number
+}

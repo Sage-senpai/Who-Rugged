@@ -1,28 +1,39 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useSold } from './useSold'
 import { HolderLeaderboard } from './HolderLeaderboard'
 import { PredictorRankings } from './PredictorRankings'
 import { ResolutionBanner } from './ResolutionBanner'
+import { WalletRegister } from './WalletRegister'
+import { BatchCard } from './BatchCard'
 import { useWallet } from '../wallet/WalletContext'
 import './sold.css'
 
 const STAKE = 50
+type Tab = 'picks' | 'batch' | 'join'
 
 export function WhoSold() {
   const { address } = useWallet()
-  const { status, window, myPredictions, leaderboard, predict } = useSold(address ?? null)
+  const { status, window, myPredictions, leaderboard, predict, register, predictBatch, activeBatch } = useSold(address ?? null)
+  const [tab, setTab] = useState<Tab>('picks')
+  const [batchVotes, setBatchVotes] = useState<Record<string, 'yes' | 'no'>>({})
 
   const handleVote = useCallback(
-    (wallet: string, vote: 'yes' | 'no') => {
-      void predict(wallet, vote, STAKE)
-    },
+    (wallet: string, vote: 'yes' | 'no') => { void predict(wallet, vote, STAKE) },
     [predict],
+  )
+
+  const handleBatchVote = useCallback(
+    (batchId: string, vote: 'yes' | 'no') => {
+      setBatchVotes((prev) => ({ ...prev, [batchId]: vote }))
+      void predictBatch(batchId, vote, STAKE)
+    },
+    [predictBatch],
   )
 
   if (status === 'unconfigured') {
     return (
       <main id="main" className="sold-shell">
-        <p className="sold-unconfigured">WHO SOLD? is not yet configured — set VITE_SOLD_URL and deploy the Worker.</p>
+        <p className="sold-loading">WHO SOLD? is not yet configured — set VITE_SOLD_URL and deploy the Worker.</p>
       </main>
     )
   }
@@ -41,21 +52,62 @@ export function WhoSold() {
         <p className="sold-eyebrow">$ANSEM // PREDICTION MARKET</p>
         <h1 className="sold-title">WHO SOLD?</h1>
         <p className="sold-subtitle">
-          Predict which top $ANSEM holders dump before the window closes. Each correct call earns {STAKE * 2} $GG.
+          Predict which $ANSEM holders dump before the window closes. Batch mode bets on the whole cohort.
         </p>
       </header>
 
       <ResolutionBanner window={window} />
 
-      <div className="sold-body">
-        <HolderLeaderboard
-          window={window}
-          myPredictions={myPredictions}
-          canPredict={!!address}
-          onVote={handleVote}
+      <nav className="sold-tabs">
+        <button className={`sold-tab${tab === 'picks' ? ' active' : ''}`} onClick={() => setTab('picks')}>
+          PICKS
+        </button>
+        <button className={`sold-tab${tab === 'batch' ? ' active' : ''}`} onClick={() => setTab('batch')}>
+          BATCH
+        </button>
+        <button className={`sold-tab${tab === 'join' ? ' active' : ''}`} onClick={() => setTab('join')}>
+          JOIN
+        </button>
+      </nav>
+
+      {tab === 'picks' && (
+        <div className="sold-body">
+          <HolderLeaderboard
+            window={window}
+            myPredictions={myPredictions}
+            canPredict={!!address}
+            onVote={handleVote}
+          />
+          <PredictorRankings scores={leaderboard} myAddress={address ?? null} />
+        </div>
+      )}
+
+      {tab === 'batch' && (
+        <div className="sold-batch-list">
+          {activeBatch ? (
+            <BatchCard
+              batch={activeBatch}
+              myVote={batchVotes[activeBatch.batchId]}
+              canPredict={!!address}
+              onVote={handleBatchVote}
+            />
+          ) : (
+            <div className="sold-batch-empty">
+              <p>No active batch window right now.</p>
+              <p className="sold-batch-empty-sub">
+                Batch windows open after airdrop events — the community bets on what % of recipients will sell within 24h.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'join' && (
+        <WalletRegister
+          onRegister={register}
+          connected={!!address}
         />
-        <PredictorRankings scores={leaderboard} myAddress={address ?? null} />
-      </div>
+      )}
     </main>
   )
 }

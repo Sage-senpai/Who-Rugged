@@ -11,7 +11,7 @@
 import { DurableObject } from 'cloudflare:workers'
 import { SolanaOracle } from './sold/SolanaOracle'
 import { TRACKED_WALLETS, lookupHolder } from './sold/holderRegistry'
-import type { TrackedHolder, PredictionWindow, Prediction, Resolution, PredictorScore } from './sold/types'
+import type { TrackedHolder, PredictionWindow, Prediction, Resolution, PredictorScore, RegisteredHolder, BatchWindow, BatchResult, BatchPrediction } from './sold/types'
 
 const ANSEM_MINT_DEFAULT = '9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump'
 
@@ -27,6 +27,7 @@ export interface Env {
   ANSEM_MINT?: string
   SOLD_SELL_THRESHOLD?: string
   SOLD_PREDICTION_WINDOW_HOURS?: string
+  SOLD_MIN_REG_BALANCE?: string
 }
 
 interface RoomInfo { code: string; hostName: string; players: number; max: number; hasSpace: boolean; updatedAt: number }
@@ -437,6 +438,7 @@ export class Directory extends DurableObject<Env> {
 
 const SELL_THRESHOLD_DEFAULT = 0.10
 const WINDOW_HOURS_DEFAULT = 12
+const MIN_REG_BALANCE_DEFAULT = 100_000
 
 function windowId(hours: number): string {
   const ms = hours * 3_600_000
@@ -511,21 +513,113 @@ export class PredictionPool extends DurableObject<Env> {
     return (await this.ctx.storage.get<PredictorScore[]>('scores')) ?? []
   }
 
-  async alarm(): Promise<void> {
-    const win = await this.ctx.storage.get<PredictionWindow>('window')
-    if (!win || win.status !== 'open') return
-    win.status = 'resolving'
-    await this.ctx.storage.put('window', win)
-    const oracle = new SolanaOracle(this.env.ALCHEMY_API_KEY, this.env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
-    const balances = await oracle.fetchCurrentBalances(win.holders.map((h) => h.wallet))
-    const threshold = parseFloat(this.env.SOLD_SELL_THRESHOLD ?? String(SELL_THRESHOLD_DEFAULT))
-    const resolutions: Resolution[] = balances.map((b) => {
-      const holder = win.holders.find((h) => h.wallet === b.wallet)
-      const before = holder?.balanceAtSnapshot ?? 0
-      const sold = before > 0 && (before - b.balance) / before > threshold
-      return { wallet: b.wallet, windowId: win.windowId, sold, balanceBefore: before, balanceAfter: b.balance, confirmedAt: Date.now() }
+  // ── wallet registration ──────────────────────────────────────────────────────
+
+  async registerHolder(wallet: string, handle: string, balance: number, registeredBy: string): Promise<{ ok: boolean; alreadyRegistered?: boolean }> {
+    const existing = await this.ctx.storage.get<RegisteredHolder>(`reg:${wallet}`)
+    if (existing) return { ok: true, alreadyRegistered: true }
+    const rec: RegisteredHolder = { wallet, handle, balanceAtReg: balance, registeredAt: Date.now(), registeredBy }
+    await this.ctx.storage.put(`reg:${wallet}`, rec)
+    const list = (await this.ctx.storage.get<string[]>('reg:list')) ?? []
+    if (!list.includes(wallet)) { list.push(wallet); await this.ctx.storage.put('reg:list', list) }
+    return { ok: true }
+  }
+
+  async getRegisteredHolders(): Promise<RegisteredHolder[]> {
+    const list = (await this.ctx.storage.get<string[]>('reg:list')) ?? []
+    const recs = await Promise.all(list.map((w) => this.ctx.storage.get<RegisteredHolder>(`reg:${w}`)))
+    return recs.filter(Boolean) as RegisteredHolder[]
+  }
+
+  // ── batch windows (cohort % prediction) ─────────────────────────────────────
+
+  async openBatchWindow(batchId: string, label: string, wallets: string[], walletBalances: Record<string, number>, threshold: number, closesAt: number): Promise<BatchWindow> {
+    const bw: BatchWindow = { batchId, label, wallets, walletBalances, threshold, opensAt: Date.now(), closesAt, status: 'open' }
+    await this.ctx.storage.put('batch', bw)
+    await this.ctx.storage.put('bpredictions', [] as BatchPrediction[])
+    await this.ctx.storage.setAlarm(closesAt)
+    return bw
+  }
+
+  async getBatchWindow(): Promise<BatchWindow | null> {
+    return (await this.ctx.storage.get<BatchWindow>('batch')) ?? null
+  }
+
+  async predictBatch(predictor: string, vote: 'yes' | 'no', stake: number): Promise<{ ok: boolean; error?: string }> {
+    const bw = await this.ctx.storage.get<BatchWindow>('batch')
+    if (!bw || bw.status !== 'open') return { ok: false, error: 'batch-not-open' }
+    const preds = (await this.ctx.storage.get<BatchPrediction[]>('bpredictions')) ?? []
+    const idx = preds.findIndex((p) => p.predictor === predictor)
+    const entry: BatchPrediction = { batchId: bw.batchId, predictor, vote, stake, placedAt: Date.now() }
+    if (idx >= 0) preds[idx] = entry; else preds.push(entry)
+    await this.ctx.storage.put('bpredictions', preds)
+    return { ok: true }
+  }
+
+  async getBatchOdds(): Promise<{ yesPct: number; yesPool: number; noPool: number }> {
+    const preds = (await this.ctx.storage.get<BatchPrediction[]>('bpredictions')) ?? []
+    const yesPool = preds.filter((p) => p.vote === 'yes').reduce((s, p) => s + p.stake, 0)
+    const noPool = preds.filter((p) => p.vote === 'no').reduce((s, p) => s + p.stake, 0)
+    const total = yesPool + noPool
+    return { yesPct: total > 0 ? yesPool / total : 0.5, yesPool, noPool }
+  }
+
+  async resolveBatch(sellersCount: number, total: number): Promise<BatchWindow> {
+    const bw = await this.ctx.storage.get<BatchWindow>('batch')
+    if (!bw) return null as never
+    const pct = total > 0 ? sellersCount / total : 0
+    const exceeded = pct > bw.threshold
+    bw.status = 'settled'
+    bw.result = { sellersCount, total, pct, exceeded } satisfies BatchResult
+    await this.ctx.storage.put('batch', bw)
+    // parimutuel: winners split losers' pool proportionally
+    const preds = (await this.ctx.storage.get<BatchPrediction[]>('bpredictions')) ?? []
+    const winnerPool = preds.filter((p) => (p.vote === 'yes') === exceeded).reduce((s, p) => s + p.stake, 0)
+    const loserPool = preds.filter((p) => (p.vote === 'yes') !== exceeded).reduce((s, p) => s + p.stake, 0)
+    const scores: PredictorScore[] = preds.map((p) => {
+      const won = (p.vote === 'yes') === exceeded
+      const pointsDelta = won && winnerPool > 0
+        ? p.stake + Math.floor((p.stake / winnerPool) * loserPool)
+        : -p.stake
+      return { predictor: p.predictor, correct: won ? 1 : 0, total: 1, pointsDelta }
     })
-    await this.resolveWindow(resolutions)
+    await this.ctx.storage.put('bscores', scores)
+    return bw
+  }
+
+  async alarm(): Promise<void> {
+    // individual window
+    const win = await this.ctx.storage.get<PredictionWindow>('window')
+    if (win && win.status === 'open') {
+      win.status = 'resolving'
+      await this.ctx.storage.put('window', win)
+      const oracle = new SolanaOracle(this.env.ALCHEMY_API_KEY, this.env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
+      const balances = await oracle.fetchCurrentBalances(win.holders.map((h) => h.wallet))
+      const threshold = parseFloat(this.env.SOLD_SELL_THRESHOLD ?? String(SELL_THRESHOLD_DEFAULT))
+      const resolutions: Resolution[] = balances.map((b) => {
+        const holder = win.holders.find((h) => h.wallet === b.wallet)
+        const before = holder?.balanceAtSnapshot ?? 0
+        const sold = before > 0 && (before - b.balance) / before > threshold
+        return { wallet: b.wallet, windowId: win.windowId, sold, balanceBefore: before, balanceAfter: b.balance, confirmedAt: Date.now() }
+      })
+      await this.resolveWindow(resolutions)
+    }
+
+    // batch window
+    const bw = await this.ctx.storage.get<BatchWindow>('batch')
+    if (bw && bw.status === 'open') {
+      bw.status = 'resolving'
+      await this.ctx.storage.put('batch', bw)
+      const oracle = new SolanaOracle(this.env.ALCHEMY_API_KEY, this.env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
+      const balances = await oracle.fetchCurrentBalances(bw.wallets)
+      const sellThresh = parseFloat(this.env.SOLD_SELL_THRESHOLD ?? String(SELL_THRESHOLD_DEFAULT))
+      let sellersCount = 0
+      for (const b of balances) {
+        const before = bw.walletBalances[b.wallet] ?? 0
+        if (before > 0 && (before - b.balance) / before > sellThresh) sellersCount++
+      }
+      await this.resolveBatch(sellersCount, bw.wallets.length)
+    }
   }
 }
 
@@ -601,16 +695,102 @@ export default {
         if (!win) {
           const mint = env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT
           const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, mint)
-          const holders = env.ALCHEMY_API_KEY && mint
-            ? await oracle.fetchTopHolders()
-            : TRACKED_WALLETS.map((wallet) => {
-                const meta = lookupHolder(wallet)
-                return { wallet, handle: meta.handle, avatarSeed: meta.avatarSeed, balanceAtSnapshot: 0, balanceNow: null } satisfies TrackedHolder
-              })
+          // merge curated + community-registered wallets
+          const registry = env.PREDICTION_POOL.getByName('registry')
+          const registered = await registry.getRegisteredHolders()
+          const regWallets = registered.map((r) => r.wallet)
+          const allWallets = [...new Set([...TRACKED_WALLETS, ...regWallets])]
+          let holders: TrackedHolder[]
+          if (env.ALCHEMY_API_KEY && mint) {
+            const balances = await oracle.fetchCurrentBalances(allWallets)
+            holders = balances.map(({ wallet, balance }) => {
+              const reg = registered.find((r) => r.wallet === wallet)
+              const curated = lookupHolder(wallet)
+              return { wallet, handle: reg?.handle ?? curated.handle, avatarSeed: reg?.handle ?? curated.avatarSeed, balanceAtSnapshot: balance, balanceNow: null } satisfies TrackedHolder
+            })
+          } else {
+            holders = allWallets.map((wallet) => {
+              const reg = registered.find((r) => r.wallet === wallet)
+              const curated = lookupHolder(wallet)
+              return { wallet, handle: reg?.handle ?? curated.handle, avatarSeed: reg?.handle ?? curated.avatarSeed, balanceAtSnapshot: 0, balanceNow: null } satisfies TrackedHolder
+            })
+          }
           const closesAt = Math.floor(Date.now() / (hours * 3_600_000)) * (hours * 3_600_000) + hours * 3_600_000
           win = await pool.openWindow(wid, holders, closesAt)
         }
         return json(win)
+      }
+
+      // balance check (before registration)
+      if (url.pathname === '/sold/balance' && request.method === 'GET') {
+        const wallet = url.searchParams.get('wallet') ?? ''
+        if (wallet.length < 32 || wallet.length > 44) return json({ error: 'invalid-wallet' }, 400)
+        const mint = env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT
+        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, mint)
+        const balances = await oracle.fetchCurrentBalances([wallet])
+        const balance = balances[0]?.balance ?? 0
+        const minRequired = parseFloat(env.SOLD_MIN_REG_BALANCE ?? String(MIN_REG_BALANCE_DEFAULT))
+        return json({ wallet, balance, minRequired, eligible: balance >= minRequired })
+      }
+
+      // self-registration
+      if (url.pathname === '/sold/register' && request.method === 'POST') {
+        let b: { wallet?: string; handle?: string; registeredBy?: string }
+        try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+        if (!b.wallet || b.wallet.length < 32 || b.wallet.length > 44) return json({ error: 'invalid-wallet' }, 400)
+        const mint = env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT
+        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, mint)
+        const balances = await oracle.fetchCurrentBalances([b.wallet])
+        const balance = balances[0]?.balance ?? 0
+        const minRequired = parseFloat(env.SOLD_MIN_REG_BALANCE ?? String(MIN_REG_BALANCE_DEFAULT))
+        if (balance < minRequired) return json({ ok: false, error: 'insufficient-balance', balance, minRequired }, 403)
+        const registry = env.PREDICTION_POOL.getByName('registry')
+        const handle = b.handle?.trim() || `Whale_${b.wallet.slice(0, 6)}`
+        const result = await registry.registerHolder(b.wallet, handle, balance, b.registeredBy ?? '')
+        return json({ ...result, balance, handle })
+      }
+
+      // registered holders list
+      if (url.pathname === '/sold/registered' && request.method === 'GET') {
+        const registry = env.PREDICTION_POOL.getByName('registry')
+        return json(await registry.getRegisteredHolders())
+      }
+
+      // batch: create
+      if (url.pathname === '/sold/batch/create' && request.method === 'POST') {
+        let b: { batchId?: string; label?: string; wallets?: string[]; threshold?: number; durationHours?: number }
+        try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+        if (!b.batchId || !b.wallets?.length) return json({ error: 'missing-fields' }, 400)
+        const mint = env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT
+        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, mint)
+        const rawBalances = await oracle.fetchCurrentBalances(b.wallets)
+        const walletBalances: Record<string, number> = {}
+        for (const bal of rawBalances) walletBalances[bal.wallet] = bal.balance
+        const batchHours = b.durationHours ?? hours
+        const closesAt = Date.now() + batchHours * 3_600_000
+        const batchPool = env.PREDICTION_POOL.getByName('batch-' + b.batchId)
+        const bw = await batchPool.openBatchWindow(b.batchId, b.label ?? b.batchId, b.wallets, walletBalances, b.threshold ?? 0.5, closesAt)
+        return json(bw)
+      }
+
+      // batch: get + odds
+      const batchGet = url.pathname.match(/^\/sold\/batch\/([^/]+)$/)
+      if (batchGet && request.method === 'GET') {
+        const batchPool = env.PREDICTION_POOL.getByName('batch-' + batchGet[1])
+        const bw = await batchPool.getBatchWindow()
+        if (!bw) return json({ error: 'not-found' }, 404)
+        const odds = await batchPool.getBatchOdds()
+        return json({ ...bw, odds })
+      }
+
+      // batch: predict
+      const batchPredict = url.pathname.match(/^\/sold\/batch\/([^/]+)\/predict$/)
+      if (batchPredict && request.method === 'POST') {
+        let b: { predictor?: string; vote?: string; stake?: number }
+        try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+        if (!b.predictor || (b.vote !== 'yes' && b.vote !== 'no')) return json({ error: 'missing-fields' }, 400)
+        const batchPool = env.PREDICTION_POOL.getByName('batch-' + batchPredict[1])
+        return json(await batchPool.predictBatch(b.predictor, b.vote as 'yes' | 'no', b.stake ?? 50))
       }
 
       if (url.pathname === '/sold/predict' && request.method === 'POST') {
