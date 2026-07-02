@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useSold } from './useSold'
 import { HolderLeaderboard } from './HolderLeaderboard'
 import { PredictorRankings } from './PredictorRankings'
@@ -49,8 +50,9 @@ export function WhoSold() {
   return (
     <main id="main" className="sold-shell">
       <header className="sold-header">
+        <Link to="/sold" className="sold-back">← WHO SOLD?</Link>
         <p className="sold-eyebrow">$ANSEM // PREDICTION MARKET</p>
-        <h1 className="sold-title">WHO SOLD?</h1>
+        <h1 className="sold-title">THE MARKET</h1>
         <p className="sold-subtitle">
           Predict which $ANSEM holders dump before the window closes. Batch mode bets on the whole cohort.
         </p>

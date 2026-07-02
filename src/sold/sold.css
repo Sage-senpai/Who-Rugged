@@ -1,5 +1,17 @@
 /* WHO SOLD? screen styles. Uses the same token variables as the rest of the game. */
 
+.sold-back {
+  display: inline-block;
+  font-family: var(--tiny);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--alarm, #ff4560);
+  text-decoration: none;
+  margin-bottom: 0.5rem;
+  opacity: 0.7;
+}
+.sold-back:hover { opacity: 1; }
+
 .sold-shell {
   min-height: 100dvh;
   display: flex;

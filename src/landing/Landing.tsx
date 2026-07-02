@@ -267,6 +267,45 @@ export function Landing() {
         </div>
       </section>
 
+      {/* WHO SOLD? CROSSOVER */}
+      <section id="who-sold">
+        <div className="wrap">
+          <div className="eyebrow">Also from the lab</div>
+          <h2 className="sec-h">
+            Introducing <span style={{ color: 'var(--alarm)' }}>WHO SOLD?</span>
+          </h2>
+          <p className="lead">
+            A live prediction market tracking what $ANSEM's biggest holders do after every airdrop.
+            Bet on who dumps. Call it right. Stack $GG.
+          </p>
+          <div className="three">
+            <div className="ico-card">
+              <div className="ic" style={{ color: 'var(--alarm)' }}>◎</div>
+              <h4>Individual Picks</h4>
+              <p>Ansem, cryptowhizz, nockchain — 11 top holders tracked. Call who sells before the 12h window closes.</p>
+            </div>
+            <div className="ico-card">
+              <div className="ic" style={{ color: 'var(--alarm)' }}>⊞</div>
+              <h4>Batch Markets</h4>
+              <p>Bet on what percentage of an airdrop cohort dumps within 24h. Parimutuel odds, community-set lines.</p>
+            </div>
+            <div className="ico-card">
+              <div className="ic" style={{ color: 'var(--alarm)' }}>✦</div>
+              <h4>Join the List</h4>
+              <p>Hold ≥ 100k $ANSEM? Register your Solana wallet. The community bets on you.</p>
+            </div>
+          </div>
+          <div className="cta" style={{ marginTop: 28 }}>
+            <Link className="btn" style={{ background: 'var(--alarm)', color: '#000', border: 'none' }} to="/sold">
+              ▶ Go to WHO SOLD?
+            </Link>
+            <Link className="btn btn-ghost" to="/sold/play">
+              Enter market directly →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <footer>
         <div className="wrap">
           <div className="marq">
@@ -280,6 +319,7 @@ export function Landing() {
             <a href="#og">WHY 0G</a>
             <a href="#kit">UI KIT</a>
             <Link to="/menu">PLAY</Link>
+            <Link to="/sold" style={{ color: 'var(--alarm)' }}>WHO SOLD? →</Link>
           </div>
           <p className="fine">
             A crime-deduction game on 0G. Built for the Zero Cup, 2026. Not actually from 1986.

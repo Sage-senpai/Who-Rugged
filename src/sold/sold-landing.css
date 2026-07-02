@@ -1,0 +1,435 @@
+/* WHO SOLD? landing page — mirrors landing.css conventions but alarm-red themed. */
+
+.sold-landing-view {
+  position: relative;
+}
+
+/* ── HUD ── */
+.sold-landing-view .hud {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--ink);
+  border-bottom: 3px solid var(--alarm, #ff4560);
+  font-family: var(--tiny);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.sold-landing-view .hud .wrap {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 9px var(--s5, 24px);
+  flex-wrap: wrap;
+}
+.sold-landing-view .hud .b       { color: var(--alarm, #ff4560); }
+.sold-landing-view .hud .b i     { color: var(--cream); font-style: normal; }
+.sold-landing-view .hud .b.gold  { color: var(--gold, #ffd700); }
+.sold-landing-view .hud .b.lime  { color: var(--lime, #39ff14); }
+.sold-landing-view .hud .ticker  { margin-left: auto; color: var(--gold, #ffd700); animation: blink 1.1s steps(2) infinite; }
+
+@keyframes blink { to { opacity: 0; } }
+
+/* ── wrap ── */
+.sold-landing-view .wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 var(--s5, 24px);
+}
+
+/* ── shared typography ── */
+.sold-landing-view .eyebrow {
+  font-family: var(--tiny);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--alarm, #ff4560);
+  text-transform: uppercase;
+}
+.sold-landing-view .sec-h {
+  font-family: var(--pix);
+  font-size: clamp(22px, 4vw, 38px);
+  line-height: 1.1;
+  margin: 10px 0 14px;
+}
+.sold-landing-view .lead {
+  color: var(--dim);
+  max-width: 52ch;
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+.sold-landing-view .u { text-decoration: underline; text-decoration-color: var(--alarm, #ff4560); }
+
+/* ── hero ── */
+.sold-landing-view header {
+  padding: 54px 0 44px;
+}
+.sold-landing-view .hero-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 40px;
+  align-items: center;
+}
+@media (max-width: 640px) {
+  .sold-landing-view .hero-grid { grid-template-columns: 1fr; }
+}
+.sold-landing-view h1.sold-logo {
+  font-family: var(--pix);
+  font-weight: 700;
+  margin: 14px 0 0;
+  font-size: clamp(46px, 9vw, 104px);
+  line-height: 0.88;
+  letter-spacing: 1px;
+  color: var(--cream);
+  text-shadow: 6px 6px 0 var(--alarm, #ff4560), 12px 12px 0 rgba(255, 0, 170, 0.6);
+}
+.sold-landing-view .sold-logo .q { color: var(--gold, #ffd700); }
+.sold-landing-view .tag {
+  font-size: clamp(15px, 2vw, 18px);
+  margin: 22px 0 6px;
+  max-width: 34ch;
+  line-height: 1.4;
+}
+.sold-landing-view .tag b   { color: var(--alarm, #ff4560); font-weight: 700; }
+.sold-landing-view .tag em  { color: var(--gold, #ffd700); font-style: normal; }
+.sold-landing-view .sub     { color: var(--dim); max-width: 44ch; font-size: 14px; line-height: 1.6; margin-top: 8px; }
+.sold-landing-view .cta     { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 28px; }
+
+/* hero right — holder ticker */
+.sold-holder-wall {
+  background: var(--void-2, #0a0a12);
+  border: 3px solid var(--alarm, #ff4560);
+  box-shadow: 0 0 28px rgba(255,69,96,0.18);
+  padding: 16px;
+  position: relative;
+}
+.sold-holder-wall-hdr {
+  font-family: var(--tiny);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--alarm, #ff4560);
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+.sold-holder-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 12px;
+}
+.sold-holder-row:last-child { border-bottom: none; }
+.sold-holder-rank { font-family: var(--tiny); font-size: 9px; opacity: 0.4; width: 18px; }
+.sold-holder-handle { flex: 1; font-weight: 600; }
+.sold-holder-pct { font-family: monospace; font-size: 11px; opacity: 0.55; }
+.sold-holder-tag {
+  font-family: var(--tiny);
+  font-size: 8px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  letter-spacing: 1px;
+}
+.sold-holder-tag.named { background: rgba(255,215,0,0.12); color: var(--gold, #ffd700); }
+.sold-holder-tag.anon  { background: rgba(255,255,255,0.06); color: var(--dim); }
+.sold-holder-wall-foot {
+  font-family: var(--tiny);
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--dim);
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ── sections ── */
+.sold-landing-view section {
+  padding: 56px 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* three columns */
+.sold-landing-view .three {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 8px;
+}
+@media (max-width: 640px) {
+  .sold-landing-view .three { grid-template-columns: 1fr; }
+}
+.sold-landing-view .ico-card {
+  padding: 22px 20px 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  background: var(--panel, rgba(255,255,255,0.03));
+}
+.sold-landing-view .ico-card:hover { border-color: rgba(255,69,96,0.35); }
+.sold-landing-view .ico-card .ic {
+  font-size: 22px;
+  margin-bottom: 10px;
+  color: var(--alarm, #ff4560);
+}
+.sold-landing-view .ico-card h4 {
+  font-family: var(--tiny);
+  font-size: 11px;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  color: var(--cream);
+}
+.sold-landing-view .ico-card p {
+  font-size: 13px;
+  color: var(--dim);
+  line-height: 1.55;
+}
+.sold-landing-view .ico-card .tag-pill {
+  display: inline-block;
+  margin-top: 10px;
+  font-family: var(--tiny);
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  border-radius: 2px;
+  border: 1px solid var(--alarm, #ff4560);
+  color: var(--alarm, #ff4560);
+}
+
+/* four steps */
+.sold-landing-view .steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+}
+@media (max-width: 700px) {
+  .sold-landing-view .steps { grid-template-columns: repeat(2, 1fr); }
+}
+.sold-landing-view .step {
+  padding: 20px 16px 18px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 4px;
+  position: relative;
+}
+.sold-landing-view .step .no {
+  font-family: var(--pix);
+  font-size: 28px;
+  color: var(--alarm, #ff4560);
+  opacity: 0.25;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.sold-landing-view .step h4 {
+  font-family: var(--tiny);
+  font-size: 11px;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.sold-landing-view .step p { font-size: 12px; color: var(--dim); line-height: 1.5; }
+
+/* market mechanic */
+.sold-mechanic {
+  padding: 28px;
+  border: 1px solid rgba(255,69,96,0.25);
+  border-radius: 8px;
+  background: rgba(255,69,96,0.04);
+  margin-top: 24px;
+}
+.sold-mechanic-title {
+  font-family: var(--tiny);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--alarm, #ff4560);
+  margin-bottom: 16px;
+}
+.sold-odds-demo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sold-odds-bar-wrap { display: flex; align-items: center; gap: 10px; }
+.sold-odds-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.06);
+  display: flex;
+}
+.sold-odds-fill-yes { background: var(--alarm, #ff4560); }
+.sold-odds-fill-no  { background: var(--lime, #39ff14); }
+.sold-odds-labels { display: flex; justify-content: space-between; font-size: 11px; }
+.sold-odds-labels .yes { color: var(--alarm, #ff4560); font-weight: 700; }
+.sold-odds-labels .no  { color: var(--lime, #39ff14); font-weight: 700; }
+.sold-mechanic-body { font-size: 13px; color: var(--dim); line-height: 1.6; margin-top: 14px; }
+.sold-mechanic-body b { color: var(--cream); }
+
+/* live window strip */
+.sold-live-strip {
+  padding: 24px 28px;
+  border: 2px solid rgba(255,69,96,0.35);
+  border-radius: 8px;
+  background: rgba(255,69,96,0.05);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+.sold-live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--alarm, #ff4560);
+  animation: sold-pulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes sold-pulse { 0%,100% { opacity:1; } 50% { opacity:0.25; } }
+.sold-live-label { font-family: var(--tiny); font-size: 10px; letter-spacing: 1px; color: var(--alarm, #ff4560); }
+.sold-live-countdown { font-family: monospace; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--cream); }
+.sold-live-holders { font-size: 12px; color: var(--dim); flex: 1; }
+.sold-live-cta { margin-left: auto; }
+
+/* ansem section */
+.sold-ansem-block {
+  padding: 28px;
+  border: 1px solid rgba(255,215,0,0.15);
+  border-radius: 8px;
+  background: rgba(255,215,0,0.04);
+  margin-top: 20px;
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.sold-ansem-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+.sold-ansem-stat-label { font-family: var(--tiny); font-size: 9px; letter-spacing: 1px; color: var(--dim); }
+.sold-ansem-stat-val { font-family: var(--pix); font-size: 22px; color: var(--gold, #ffd700); }
+.sold-ansem-stat-sub { font-size: 11px; color: var(--dim); }
+.sold-ansem-divider { width: 1px; background: rgba(255,215,0,0.12); align-self: stretch; }
+.sold-ansem-body { flex: 1; font-size: 13px; color: var(--dim); line-height: 1.6; }
+.sold-ansem-body b { color: var(--cream); }
+.sold-ansem-wallet {
+  font-family: monospace;
+  font-size: 10px;
+  color: var(--gold, #ffd700);
+  background: rgba(255,215,0,0.08);
+  padding: 4px 8px;
+  border-radius: 3px;
+  display: inline-block;
+  margin-top: 8px;
+  word-break: break-all;
+}
+
+/* register preview */
+.sold-join-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 20px;
+}
+@media (max-width: 640px) {
+  .sold-join-grid { grid-template-columns: 1fr; }
+}
+.sold-join-card {
+  padding: 24px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+}
+.sold-join-card h4 {
+  font-family: var(--tiny);
+  font-size: 11px;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  color: var(--cream);
+}
+.sold-join-card p { font-size: 13px; color: var(--dim); line-height: 1.55; }
+.sold-join-card ul { margin: 10px 0 0 0; padding: 0; list-style: none; }
+.sold-join-card ul li { font-size: 12px; color: var(--dim); padding: 3px 0; }
+.sold-join-card ul li::before { content: '▸ '; color: var(--alarm, #ff4560); }
+
+/* twist big text */
+.sold-big { font-family: var(--pix); font-size: clamp(14px, 2.5vw, 20px); color: var(--cream); display: block; margin-top: 18px; }
+
+/* trust flow */
+.sold-flow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+  font-size: 12px;
+}
+.sold-flow .node {
+  padding: 6px 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 3px;
+  background: rgba(255,255,255,0.03);
+}
+.sold-flow .node b { color: var(--alarm, #ff4560); }
+.sold-flow .arr { color: var(--alarm, #ff4560); opacity: 0.5; }
+
+/* marquee footer */
+.sold-landing-view footer {
+  border-top: 3px solid var(--alarm, #ff4560);
+  padding: 24px 0;
+}
+.sold-landing-view .marq {
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: var(--tiny);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--alarm, #ff4560);
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,69,96,0.15);
+  margin-bottom: 20px;
+}
+.sold-landing-view .marq span {
+  display: inline-block;
+  animation: marquee 28s linear infinite;
+}
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.sold-landing-view .links {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-family: var(--tiny);
+  font-size: 10px;
+  letter-spacing: 1px;
+  margin-bottom: 14px;
+}
+.sold-landing-view .links a,
+.sold-landing-view .links button {
+  color: var(--dim);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--tiny);
+  font-size: 10px;
+  letter-spacing: 1px;
+  padding: 0;
+}
+.sold-landing-view .links a:hover,
+.sold-landing-view .links button:hover { color: var(--alarm, #ff4560); }
+.sold-landing-view .fine { font-size: 11px; color: var(--dim); opacity: 0.5; }
+
+/* wallet connect inline */
+.sold-wallet-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sold-wallet-addr {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--lime, #39ff14);
+  padding: 4px 10px;
+  border: 1px solid var(--lime, #39ff14);
+  border-radius: 3px;
+}

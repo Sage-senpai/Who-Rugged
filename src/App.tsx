@@ -21,6 +21,7 @@ const Game = lazy(() => import('./game/Game').then((m) => ({ default: m.Game }))
 const Court = lazy(() => import('./court/Court').then((m) => ({ default: m.Court })))
 const Lobby = lazy(() => import('./lobby/Lobby').then((m) => ({ default: m.Lobby })))
 const WhoSold = lazy(() => import('./sold/WhoSold').then((m) => ({ default: m.WhoSold })))
+const SoldLanding = lazy(() => import('./sold/SoldLanding').then((m) => ({ default: m.SoldLanding })))
 
 export default function App() {
   return (
@@ -45,7 +46,8 @@ export default function App() {
             <Route path="/play" element={<Game />} />
             <Route path="/court" element={<Court />} />
             <Route path="/lobby" element={<Lobby />} />
-            <Route path="/sold" element={<WhoSold />} />
+            <Route path="/sold" element={<SoldLanding />} />
+            <Route path="/sold/play" element={<WhoSold />} />
             <Route path="*" element={<Landing />} />
           </Routes>
         </Suspense>
