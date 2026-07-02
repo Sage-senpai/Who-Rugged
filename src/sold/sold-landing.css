@@ -418,89 +418,151 @@
 .sold-landing-view .links button:hover { color: var(--alarm, #ff4560); }
 .sold-landing-view .fine { font-size: 11px; color: var(--dim); opacity: 0.5; }
 
-/* ── sound toggle in HUD ── */
-.sold-sound-btn {
-  margin-left: auto;
-  font-family: var(--tiny);
+/* ── holder wall — add bal column ── */
+.sold-holder-bal {
+  font-family: monospace;
   font-size: 10px;
-  letter-spacing: 1px;
-  background: transparent;
-  border: 1px solid rgba(255,69,96,0.3);
-  color: var(--dim);
-  padding: 2px 8px;
-  cursor: pointer;
-  border-radius: 2px;
-  transition: color 0.12s, border-color 0.12s;
+  color: var(--gold, #ffd700);
+  opacity: 0.8;
+  min-width: 44px;
 }
-.sold-sound-btn:hover { color: var(--alarm, #ff4560); border-color: var(--alarm, #ff4560); }
 
-/* ── WHO RUGGED companion band ── */
-.sold-universe-band {
-  background: rgba(0, 200, 255, 0.03);
-  border-top: 2px solid rgba(0, 200, 255, 0.22);
-  border-bottom: 2px solid rgba(0, 200, 255, 0.22);
-  padding: 28px 0;
+/* ── VS section ── */
+.sold-vs-section {
+  padding: 56px 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(180deg, rgba(255,69,96,0.04) 0%, rgba(0,0,0,0) 40%, rgba(0,212,255,0.04) 100%);
 }
-.sold-universe-inner {
+
+.sold-vs-eyebrow {
+  font-family: var(--tiny);
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--dim);
+  text-align: center;
+  margin-bottom: 32px;
+  opacity: 0.6;
+}
+
+.sold-vs-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0;
+  align-items: stretch;
+}
+
+@media (max-width: 680px) {
+  .sold-vs-grid { grid-template-columns: 1fr; }
+  .sold-vs-divider { flex-direction: row; height: auto; padding: 12px 0; }
+  .sold-vs-divider-line { flex: 1; height: 1px; width: auto; }
+}
+
+/* each card */
+.sold-vs-card {
+  padding: 32px 28px;
+  border: 2px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
   display: flex;
-  align-items: center;
-  gap: 32px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  transition: border-color 0.2s;
 }
-.sold-universe-left { flex-shrink: 0; }
-.sold-universe-eyebrow {
+.sold-vs-card--sold {
+  border-color: rgba(255,69,96,0.3);
+  background: rgba(255,69,96,0.04);
+}
+.sold-vs-card--sold:hover { border-color: rgba(255,69,96,0.55); }
+.sold-vs-card--rugged {
+  border-color: rgba(0,212,255,0.3);
+  background: rgba(0,212,255,0.04);
+}
+.sold-vs-card--rugged:hover { border-color: rgba(0,212,255,0.55); }
+
+.sold-vs-card-tag {
   font-family: var(--tiny);
   font-size: 8px;
   letter-spacing: 2px;
-  color: var(--cyan, #00d4ff);
-  opacity: 0.6;
-  margin-bottom: 6px;
+  opacity: 0.5;
 }
-.sold-universe-logo {
+.sold-vs-card--sold  .sold-vs-card-tag { color: var(--alarm, #ff4560); }
+.sold-vs-card--rugged .sold-vs-card-tag { color: var(--cyan, #00d4ff); }
+
+.sold-vs-card-logo {
   font-family: var(--pix);
-  font-size: clamp(22px, 4vw, 36px);
-  line-height: 0.92;
-  color: var(--cyan, #00d4ff);
-  text-shadow: 3px 3px 0 rgba(0,212,255,0.25);
+  font-size: clamp(28px, 5vw, 48px);
+  line-height: 0.9;
 }
-.sold-universe-body {
-  flex: 1;
-  min-width: 200px;
-}
-.sold-universe-body p {
+.sold-vs-card--sold  .sold-vs-card-logo { color: var(--cream); text-shadow: 4px 4px 0 var(--alarm, #ff4560); }
+.sold-vs-card--sold  .sold-vs-card-logo span { color: var(--gold, #ffd700); }
+.sold-vs-card--rugged .sold-vs-card-logo { color: var(--cyan, #00d4ff); text-shadow: 4px 4px 0 rgba(0,212,255,0.3); }
+.sold-vs-card--rugged .sold-vs-card-logo span { color: var(--gold, #ffd700); }
+.sold-vs-card-logo--rugged { color: var(--cyan, #00d4ff) !important; }
+
+.sold-vs-card-desc {
   font-size: 13px;
   color: var(--dim);
-  max-width: 48ch;
-  line-height: 1.55;
-  margin: 0 0 10px;
+  line-height: 1.6;
+  max-width: 36ch;
+  margin: 0;
 }
-.sold-universe-tags {
+
+.sold-vs-card-traits {
+  margin: 0;
+  padding: 0;
+  list-style: none;
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
 }
-.sold-universe-tag {
+.sold-vs-card-traits li {
   font-family: var(--tiny);
-  font-size: 8px;
-  letter-spacing: 1px;
-  padding: 2px 7px;
-  border: 1px solid rgba(0, 212, 255, 0.25);
-  color: var(--cyan, #00d4ff);
-  border-radius: 2px;
-  opacity: 0.8;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.sold-universe-cta {
+.sold-vs-card-traits li::before { content: '▸'; opacity: 0.5; }
+.sold-vs-card-traits--rugged li::before { color: var(--cyan, #00d4ff); }
+.sold-vs-card-traits           li::before { color: var(--alarm, #ff4560); }
+
+.sold-vs-card-ctas { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+
+.btn-cyan {
+  background: var(--cyan, #00d4ff);
+  color: #000;
+  border: none;
+  font-weight: 700;
+}
+.btn-cyan:hover { opacity: 0.85; }
+
+.sold-ghost-sold   { border-color: rgba(255,69,96,0.35) !important; color: var(--alarm, #ff4560) !important; }
+.sold-ghost-rugged { border-color: rgba(0,212,255,0.35) !important; color: var(--cyan, #00d4ff) !important; }
+
+/* VS divider */
+.sold-vs-divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 24px;
+}
+.sold-vs-divider-line {
+  width: 1px;
+  flex: 1;
+  background: linear-gradient(180deg, rgba(255,69,96,0.4) 0%, rgba(0,212,255,0.4) 100%);
+}
+.sold-vs-divider-badge {
+  font-family: var(--pix);
+  font-size: 22px;
+  color: var(--gold, #ffd700);
+  text-shadow: 0 0 20px rgba(255,215,0,0.4);
+  letter-spacing: 2px;
   flex-shrink: 0;
-  border-color: var(--cyan, #00d4ff) !important;
-  color: var(--cyan, #00d4ff) !important;
-  font-size: 11px !important;
-}
-.sold-universe-cta:hover {
-  background: rgba(0, 212, 255, 0.08) !important;
-}
-@media (max-width: 640px) {
-  .sold-universe-inner { flex-direction: column; align-items: flex-start; }
-  .sold-universe-cta { align-self: flex-start; }
 }
 
 /* wallet connect inline */

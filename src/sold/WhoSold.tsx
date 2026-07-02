@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useSold } from './useSold'
 import { HolderLeaderboard } from './HolderLeaderboard'
 import { PredictorRankings } from './PredictorRankings'
 import { ResolutionBanner } from './ResolutionBanner'
 import { WalletRegister } from './WalletRegister'
 import { BatchCard } from './BatchCard'
+import { SoldNav } from './SoldNav'
 import { useWallet } from '../wallet/WalletContext'
 import './sold.css'
 
@@ -48,9 +48,10 @@ export function WhoSold() {
   }
 
   return (
-    <main id="main" className="sold-shell">
+    <>
+      <SoldNav />
+      <main id="main" className="sold-shell">
       <header className="sold-header">
-        <Link to="/" className="sold-back">← WHO SOLD?</Link>
         <p className="sold-eyebrow">$ANSEM // PREDICTION MARKET</p>
         <h1 className="sold-title">THE MARKET</h1>
         <p className="sold-subtitle">
@@ -111,5 +112,6 @@ export function WhoSold() {
         />
       )}
     </main>
+    </>
   )
 }

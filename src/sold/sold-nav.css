@@ -1,0 +1,119 @@
+/* Shared top nav for all WHO SOLD pages. Alarm-red left, cyan right. */
+
+.sold-nav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--ink);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-family: var(--tiny);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.sold-nav-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 20px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* brand */
+.sold-nav-brand {
+  text-decoration: none;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.sold-nav-brand-sold   { color: var(--alarm, #ff4560); font-weight: 700; }
+.sold-nav-brand-sep    { color: var(--dim); margin: 0 3px; }
+.sold-nav-brand-rugged { color: var(--cyan, #00d4ff); font-weight: 700; }
+
+/* links */
+.sold-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sold-nav-live {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+  font-size: 9px;
+  padding: 2px 8px;
+  border: 1px solid rgba(255,69,96,0.25);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.sold-nav-live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--alarm, #ff4560);
+  animation: sold-nav-blink 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes sold-nav-blink { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
+
+.sold-nav-link {
+  text-decoration: none;
+  color: var(--dim);
+  transition: color 0.12s;
+  white-space: nowrap;
+}
+.sold-nav-link:hover { color: var(--cream); }
+.sold-nav-link--sold.active  { color: var(--alarm, #ff4560); }
+.sold-nav-link--rugged:hover { color: var(--cyan, #00d4ff); }
+
+.sold-nav-cta {
+  display: inline-block;
+  padding: 3px 10px;
+  border: 1px solid var(--alarm, #ff4560);
+  color: var(--alarm, #ff4560);
+  text-decoration: none;
+  border-radius: 2px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  transition: background 0.12s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sold-nav-cta:hover { background: rgba(255,69,96,0.12); }
+
+/* right side */
+.sold-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.sold-nav-sound {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--dim);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  line-height: 1.4;
+  transition: color 0.12s, border-color 0.12s;
+}
+.sold-nav-sound:hover { color: var(--alarm, #ff4560); border-color: rgba(255,69,96,0.4); }
+
+@media (max-width: 540px) {
+  .sold-nav-inner { gap: 10px; padding: 0 12px; }
+  .sold-nav-brand-rugged,
+  .sold-nav-brand-sep { display: none; }
+  .sold-nav-cta { display: none; }
+}

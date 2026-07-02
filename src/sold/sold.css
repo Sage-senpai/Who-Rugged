@@ -22,6 +22,9 @@
   margin: 0 auto;
 }
 
+/* When WhoSold renders with SoldNav outside the shell, add top gap */
+.sold-shell:first-child { padding-top: 1.5rem; }
+
 .sold-header {
   display: flex;
   flex-direction: column;

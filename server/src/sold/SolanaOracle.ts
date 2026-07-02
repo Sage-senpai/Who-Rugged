@@ -1,5 +1,6 @@
 /* Reads $ANSEM balances from Solana via Alchemy's Solana RPC.
-   All calls are server-side only — the API key never reaches the browser. */
+   All calls are server-side only — the API key never reaches the browser.
+   Falls back to public RPC if Alchemy fails, then to knownBalance from registry. */
 import { lookupHolder, TRACKED_WALLETS } from './holderRegistry'
 import type { TrackedHolder } from './types'
 
@@ -7,6 +8,8 @@ import type { TrackedHolder } from './types'
 export interface HolderBalance {
   wallet: string
   balance: number
+  /** true when balance was read live; false when falling back to registry snapshot */
+  live: boolean
 }
 
 export class SolanaOracle {
@@ -44,20 +47,36 @@ export class SolanaOracle {
     return null
   }
 
-  /** Returns current $ANSEM ui_amount balance for each wallet. */
+  /** Returns current $ANSEM ui_amount balance for each wallet.
+   *  Falls back to knownBalance from registry when live RPC returns 0 or fails. */
   async fetchCurrentBalances(wallets: string[]): Promise<HolderBalance[]> {
-    if (!this.mint) return wallets.map((w) => ({ wallet: w, balance: 0 }))
+    if (!this.mint) {
+      return wallets.map((w) => {
+        const meta = lookupHolder(w)
+        return { wallet: w, balance: meta.knownBalance, live: false }
+      })
+    }
 
     const results = await Promise.all(
       wallets.map(async (wallet) => {
-        type AccountsResult = { value: { account: { data: { parsed: { info: { tokenAmount: { uiAmount: number } } } } } }[] }
+        type AccountsResult = {
+          value: {
+            account: {
+              data: { parsed: { info: { tokenAmount: { uiAmount: number | null } } } }
+            }
+          }[]
+        }
         const result = await this.rpcCall<AccountsResult>(
           wallet,
           'getTokenAccountsByOwner',
           [wallet, { mint: this.mint }, { encoding: 'jsonParsed' }],
         )
-        const balance = result?.value?.[0]?.account?.data?.parsed?.info?.tokenAmount?.uiAmount ?? 0
-        return { wallet, balance }
+        const liveBalance = result?.value?.[0]?.account?.data?.parsed?.info?.tokenAmount?.uiAmount
+        if (liveBalance !== undefined && liveBalance !== null && liveBalance > 0) {
+          return { wallet, balance: liveBalance, live: true }
+        }
+        const meta = lookupHolder(wallet)
+        return { wallet, balance: meta.knownBalance, live: false }
       }),
     )
     return results
