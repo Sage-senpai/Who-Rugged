@@ -22,18 +22,26 @@ export class SolanaOracle {
   }
 
   private async rpcCall<T>(id: string, method: string, params: unknown[]): Promise<T | null> {
-    try {
-      const res = await fetch(this.rpc, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id, method, params }),
-      })
-      if (!res.ok) return null
-      const data = (await res.json()) as { result?: T; error?: unknown }
-      return data.result ?? null
-    } catch {
-      return null
+    const endpoints = [this.rpc]
+    if (this.rpc !== 'https://api.mainnet-beta.solana.com') {
+      endpoints.push('https://api.mainnet-beta.solana.com')
     }
+    for (const endpoint of endpoints) {
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id, method, params }),
+        })
+        if (!res.ok) continue
+        const data = (await res.json()) as { result?: T; error?: { code: number; message: string } }
+        if (data.error) continue
+        if (data.result !== undefined) return data.result
+      } catch {
+        // try next endpoint
+      }
+    }
+    return null
   }
 
   /** Returns current $ANSEM ui_amount balance for each wallet. */

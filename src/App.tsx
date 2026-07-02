@@ -37,7 +37,8 @@ export default function App() {
         <PresenceBeacon />
         <Suspense fallback={<RouteFallback />}>
           <Routes>
-            <Route path="/" element={<Landing />} />
+            <Route path="/" element={<SoldLanding />} />
+            <Route path="/who-rugged" element={<Landing />} />
             <Route path="/menu" element={<Menu />} />
             <Route path="/how" element={<HowToPlay />} />
             <Route path="/settings" element={<Settings />} />
@@ -48,7 +49,7 @@ export default function App() {
             <Route path="/lobby" element={<Lobby />} />
             <Route path="/sold" element={<SoldLanding />} />
             <Route path="/sold/play" element={<WhoSold />} />
-            <Route path="*" element={<Landing />} />
+            <Route path="*" element={<SoldLanding />} />
           </Routes>
         </Suspense>
         </WalletProvider>

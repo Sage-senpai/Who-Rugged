@@ -32,8 +32,10 @@ export function PredictionCard({ holder, myPrediction, disabled, onVote }: Props
         <span className="sold-card-handle">@{holder.handle}</span>
         <span className="sold-card-balance">
           {holder.balanceNow !== null
-            ? `${fmt(holder.balanceNow)} → sold: ${holder.balanceNow < holder.balanceAtSnapshot ? 'YES' : 'NO'}`
-            : `${fmt(holder.balanceAtSnapshot)} $ANSEM`}
+            ? `${holder.balanceNow === 0 ? '—' : fmt(holder.balanceNow)} → ${holder.balanceNow < holder.balanceAtSnapshot ? 'SOLD' : 'HELD'}`
+            : holder.balanceAtSnapshot > 0
+              ? `${fmt(holder.balanceAtSnapshot)} $ANSEM`
+              : 'oracle syncing…'}
         </span>
       </div>
 

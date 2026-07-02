@@ -50,7 +50,7 @@ export function WhoSold() {
   return (
     <main id="main" className="sold-shell">
       <header className="sold-header">
-        <Link to="/sold" className="sold-back">← WHO SOLD?</Link>
+        <Link to="/" className="sold-back">← WHO SOLD?</Link>
         <p className="sold-eyebrow">$ANSEM // PREDICTION MARKET</p>
         <h1 className="sold-title">THE MARKET</h1>
         <p className="sold-subtitle">

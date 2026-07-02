@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useWallet } from '../wallet/WalletContext'
 import { ConnectButton } from '../wallet/ConnectButton'
+import { useSettings } from '../settings/SettingsContext'
 import { getCurrentWindow } from './soldClient'
 import type { PredictionWindow } from './soldTypes'
 import './sold-landing.css'
@@ -38,6 +39,7 @@ function useCountdown(closesAt: number | null) {
 
 export function SoldLanding() {
   const { address } = useWallet()
+  const { settings, toggle } = useSettings()
   const [liveWindow, setLiveWindow] = useState<PredictionWindow | null>(null)
   const countdown = useCountdown(liveWindow?.closesAt ?? null)
 
@@ -56,6 +58,13 @@ export function SoldLanding() {
           <span className="b lime">HOLDERS <i>11 tracked</i></span>
           <span className="b">POOL <i>$GG</i></span>
           <span className="ticker">◉ LIVE MARKET</span>
+          <button
+            className="sold-sound-btn"
+            onClick={() => toggle('music')}
+            title={settings.music ? 'Mute music' : 'Unmute music'}
+          >
+            {settings.music ? '♪ ON' : '♪ OFF'}
+          </button>
         </div>
       </div>
 
@@ -120,6 +129,30 @@ export function SoldLanding() {
           </div>
         </div>
       </header>
+
+      {/* ── WHO RUGGED COMPANION BAND ── */}
+      <div className="sold-universe-band">
+        <div className="wrap">
+          <div className="sold-universe-inner">
+            <div className="sold-universe-left">
+              <div className="sold-universe-eyebrow">ALSO IN THIS UNIVERSE</div>
+              <div className="sold-universe-logo">WHO<br />RUGGED?</div>
+            </div>
+            <div className="sold-universe-body">
+              <p>Five suspects. One drained the vault. A social deduction game where roles are sealed in a TEE and the pot settles on-chain. Zero trust, provably fair.</p>
+              <div className="sold-universe-tags">
+                <span className="sold-universe-tag">SOCIAL DEDUCTION</span>
+                <span className="sold-universe-tag">TEE-ATTESTED</span>
+                <span className="sold-universe-tag">0G NETWORK</span>
+                <span className="sold-universe-tag">PLAY TO EARN</span>
+              </div>
+            </div>
+            <Link className="btn btn-ghost sold-universe-cta" to="/who-rugged">
+              PLAY NOW →
+            </Link>
+          </div>
+        </div>
+      </div>
 
       {/* ── THREE MODES ── */}
       <section id="how">
@@ -348,7 +381,7 @@ export function SoldLanding() {
             <a href="#how">HOW IT WORKS</a>
             <a href="#join">JOIN</a>
             <Link to="/sold/play">ENTER MARKET</Link>
-            <Link to="/">← WHO RUGGED?</Link>
+            <Link to="/who-rugged">← WHO RUGGED?</Link>
           </div>
           <p className="fine">
             A prediction market on $ANSEM holder behavior. On-chain oracle via Alchemy + Solana.

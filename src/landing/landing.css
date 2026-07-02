@@ -24,6 +24,16 @@
   padding: 9px var(--s5);
   flex-wrap: wrap;
 }
+.landing-view .hud .hud-home {
+  font-family: var(--tiny);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--dim);
+  text-decoration: none;
+  opacity: 0.6;
+  transition: opacity 0.12s, color 0.12s;
+}
+.landing-view .hud .hud-home:hover { opacity: 1; color: var(--alarm); }
 .landing-view .hud .b { color: var(--sky); }
 .landing-view .hud .b i { color: var(--cream); font-style: normal; }
 .landing-view .hud .b.gold { color: var(--gold); }

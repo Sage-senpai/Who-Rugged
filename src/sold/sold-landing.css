@@ -418,6 +418,91 @@
 .sold-landing-view .links button:hover { color: var(--alarm, #ff4560); }
 .sold-landing-view .fine { font-size: 11px; color: var(--dim); opacity: 0.5; }
 
+/* ── sound toggle in HUD ── */
+.sold-sound-btn {
+  margin-left: auto;
+  font-family: var(--tiny);
+  font-size: 10px;
+  letter-spacing: 1px;
+  background: transparent;
+  border: 1px solid rgba(255,69,96,0.3);
+  color: var(--dim);
+  padding: 2px 8px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.sold-sound-btn:hover { color: var(--alarm, #ff4560); border-color: var(--alarm, #ff4560); }
+
+/* ── WHO RUGGED companion band ── */
+.sold-universe-band {
+  background: rgba(0, 200, 255, 0.03);
+  border-top: 2px solid rgba(0, 200, 255, 0.22);
+  border-bottom: 2px solid rgba(0, 200, 255, 0.22);
+  padding: 28px 0;
+}
+.sold-universe-inner {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.sold-universe-left { flex-shrink: 0; }
+.sold-universe-eyebrow {
+  font-family: var(--tiny);
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--cyan, #00d4ff);
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+.sold-universe-logo {
+  font-family: var(--pix);
+  font-size: clamp(22px, 4vw, 36px);
+  line-height: 0.92;
+  color: var(--cyan, #00d4ff);
+  text-shadow: 3px 3px 0 rgba(0,212,255,0.25);
+}
+.sold-universe-body {
+  flex: 1;
+  min-width: 200px;
+}
+.sold-universe-body p {
+  font-size: 13px;
+  color: var(--dim);
+  max-width: 48ch;
+  line-height: 1.55;
+  margin: 0 0 10px;
+}
+.sold-universe-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.sold-universe-tag {
+  font-family: var(--tiny);
+  font-size: 8px;
+  letter-spacing: 1px;
+  padding: 2px 7px;
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  color: var(--cyan, #00d4ff);
+  border-radius: 2px;
+  opacity: 0.8;
+}
+.sold-universe-cta {
+  flex-shrink: 0;
+  border-color: var(--cyan, #00d4ff) !important;
+  color: var(--cyan, #00d4ff) !important;
+  font-size: 11px !important;
+}
+.sold-universe-cta:hover {
+  background: rgba(0, 212, 255, 0.08) !important;
+}
+@media (max-width: 640px) {
+  .sold-universe-inner { flex-direction: column; align-items: flex-start; }
+  .sold-universe-cta { align-self: flex-start; }
+}
+
 /* wallet connect inline */
 .sold-wallet-inline {
   display: flex;
