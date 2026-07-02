@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useSold } from './useSold'
+import { BET_TOKEN } from './soldConfig'
 import { HolderLeaderboard } from './HolderLeaderboard'
 import { PredictorRankings } from './PredictorRankings'
 import { ResolutionBanner } from './ResolutionBanner'
@@ -55,7 +56,7 @@ export function WhoSold() {
         <p className="sold-eyebrow">$ANSEM // PREDICTION MARKET</p>
         <h1 className="sold-title">THE MARKET</h1>
         <p className="sold-subtitle">
-          Predict which $ANSEM holders dump before the window closes. Batch mode bets on the whole cohort.
+          Real wallets. Live oracle. Bet {BET_TOKEN} on who dumps before the window closes.
         </p>
       </header>
 

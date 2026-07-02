@@ -4,17 +4,19 @@ import { useWallet } from '../wallet/WalletContext'
 import { ConnectButton } from '../wallet/ConnectButton'
 import { getCurrentWindow } from './soldClient'
 import { SoldNav } from './SoldNav'
+import { BET_TOKEN, EVIL_TOKEN_TICKER, EVIL_TOKEN_LIVE } from './soldConfig'
 import type { PredictionWindow } from './soldTypes'
 import './sold-landing.css'
 
-const HOLDERS = [
-  { rank: 1, handle: 'blknoiz06', pct: '58.66%', bal: '586.6M', named: true },
-  { rank: 2, handle: 'Whale_CLM6E4', pct: '1.06%', bal: '10.6M', named: false },
-  { rank: 3, handle: 'cryptowhizz', pct: '0.95%', bal: '9.5M', named: true },
-  { rank: 4, handle: 'Whale_8wLPuP', pct: '0.52%', bal: '5.2M', named: false },
-  { rank: 5, handle: 'Whale_HDixbr', pct: '0.38%', bal: '3.8M', named: false },
-  { rank: 6, handle: 'nockchain', pct: '0.33%', bal: '3.3M', named: true },
-  { rank: 7, handle: 'CxCTVj_261x', pct: '0.04%', bal: '400K', named: true },
+/* Airdrop suspects — pulled from Solscan, Jul 1 2026.
+   These are the wallets CT is already watching. */
+const SUSPECTS = [
+  { rank: 1, handle: 'blknoiz06', bal: '586.6M', pct: '58.66%', named: true, role: 'KINGPIN' },
+  { rank: 2, handle: 'Whale_CLM6E4', bal: '10.6M', pct: '1.06%', named: false, role: 'SILENT BAG' },
+  { rank: 3, handle: 'cryptowhizz', bal: '9.5M', pct: '0.95%', named: true, role: 'VOCAL HOLDER' },
+  { rank: 4, handle: 'Whale_8wLPuP', bal: '5.2M', pct: '0.52%', named: false, role: 'GHOST WALLET' },
+  { rank: 5, handle: 'nockchain', bal: '3.3M', pct: '0.33%', named: true, role: 'BUILDER' },
+  { rank: 6, handle: 'CxCTVj_261x', bal: '400K', pct: '0.04%', named: true, role: '261× TRADER' },
 ]
 
 function useCountdown(closesAt: number | null) {
@@ -48,17 +50,20 @@ export function SoldLanding() {
   return (
     <div className="sold-landing-view">
 
-      {/* ── SHARED NAV ── */}
       <SoldNav countdown={liveWindow ? countdown : undefined} windowOpen={liveWindow?.status === 'open'} />
 
-      {/* ── HUD (market stats only, nav above) ── */}
+      {/* ── HUD ── */}
       <div className="hud">
         <div className="wrap">
           <span className="b alarm">$ANSEM</span>
           <span className="b gold">WINDOW <i>{liveWindow ? countdown : '—'}</i></span>
-          <span className="b lime">11 <i>HOLDERS TRACKED</i></span>
-          <span className="b">ORACLE <i>SOLANA</i></span>
-          <span className="ticker">◉ LIVE MARKET</span>
+          <span className="b lime">ORACLE <i>SOLANA LIVE</i></span>
+          {EVIL_TOKEN_LIVE ? (
+            <span className="b" style={{ color: 'var(--alarm)' }}>BET <i>{EVIL_TOKEN_TICKER}</i></span>
+          ) : (
+            <span className="b" style={{ opacity: 0.5 }}>{EVIL_TOKEN_TICKER} <i>COMING SOON</i></span>
+          )}
+          <span className="ticker">◉ AIRDROP BETRAYAL MARKET</span>
         </div>
       </div>
 
@@ -67,19 +72,19 @@ export function SoldLanding() {
         <div className="wrap">
           <div className="hero-grid">
             <div>
-              <div className="eyebrow">$ANSEM Prediction Market · Solana</div>
+              <div className="eyebrow">$ANSEM Airdrop · Solana · Public Wallets</div>
               <h1 className="sold-logo">
                 WHO<br />
                 SOLD<span className="q">?</span>
               </h1>
               <p className="tag">
-                Ansem's wallet is public. <b>Bet on what he does with it.</b>
-                {' '}The community tracks every major holder —
-                {' '}<em>call who sells before the window closes and stack $GG.</em>
+                Ansem dropped. CT is already calling who betrays the community first.
+                {' '}<b>Put {EVIL_TOKEN_LIVE ? EVIL_TOKEN_TICKER : BET_TOKEN} on it.</b>
               </p>
               <p className="sub">
-                Real-time prediction market on on-chain Solana data. No price APIs,
-                no speculation — wallet balances, read live, resolved automatically.
+                Every airdrop recipient's wallet is public on Solana. We built the market
+                around that fact — bet on who dumps before the window closes.
+                The oracle reads it live. Settlement is automatic.
               </p>
               <div className="cta">
                 {address ? (
@@ -94,36 +99,103 @@ export function SoldLanding() {
                     </Link>
                   </div>
                 )}
-                <a className="btn btn-ghost" href="#how">
-                  How it works
+                <a className="btn btn-ghost" href="#moat">
+                  Got the airdrop? →
                 </a>
               </div>
             </div>
 
-            {/* Holder wall */}
+            {/* Suspect wall */}
             <div className="sold-holder-wall">
               <div className="sold-holder-wall-hdr">
-                <span>TOP $ANSEM HOLDERS</span>
-                <span>BEING WATCHED</span>
+                <span>PUBLICLY WATCHED</span>
+                <span>WALLETS ON-CHAIN</span>
               </div>
-              {HOLDERS.map((h) => (
-                <div className="sold-holder-row" key={h.handle}>
-                  <span className="sold-holder-rank">#{h.rank}</span>
-                  <span className="sold-holder-handle">{h.handle}</span>
-                  <span className="sold-holder-bal">{h.bal}</span>
-                  <span className="sold-holder-pct">{h.pct}</span>
-                  <span className={`sold-holder-tag ${h.named ? 'named' : 'anon'}`}>
-                    {h.named ? 'NAMED' : 'ANON'}
+              {SUSPECTS.map((s) => (
+                <div className="sold-holder-row" key={s.handle}>
+                  <span className="sold-holder-rank">#{s.rank}</span>
+                  <span className="sold-holder-handle">{s.handle}</span>
+                  <span className="sold-holder-bal">{s.bal}</span>
+                  <span className={`sold-holder-tag ${s.named ? 'named' : 'anon'}`}>
+                    {s.role}
                   </span>
                 </div>
               ))}
               <div className="sold-holder-wall-foot">
-                + community-registered holders · new window every 12h
+                + community-registered recipients · window resets every 12h
               </div>
             </div>
           </div>
         </div>
       </header>
+
+      {/* ── MOAT — THE BETRAYAL REGISTER ── */}
+      <section id="moat" className="sold-moat-section">
+        <div className="wrap">
+          <div className="sold-moat-inner">
+            <div className="sold-moat-left">
+              <div className="eyebrow" style={{ color: 'var(--alarm)' }}>THE MOAT</div>
+              <h2 className="sec-h" style={{ margin: '10px 0 0' }}>
+                Got the airdrop?<br />
+                <span className="u">CT is already betting you'll dump.</span>
+              </h2>
+              <p className="lead" style={{ marginTop: 16 }}>
+                People have been saying it on CT for months: "this guy will sell the second
+                he gets the drop." We built the market for that exact bet.
+                Add your wallet. Let the community put money on it.
+                If you hold, you earn. If you dump, they earn.
+                Either way, the blockchain remembers.
+              </p>
+              <div className="sold-moat-ctas">
+                <Link className="btn btn-gold" to="/sold/play">
+                  ▶ Register My Wallet
+                </Link>
+                <Link className="btn btn-ghost" to="/sold/play">
+                  Browse the market →
+                </Link>
+              </div>
+            </div>
+            <div className="sold-moat-right">
+              <div className="sold-moat-card">
+                <div className="sold-moat-card-eyebrow">TO JOIN THE WATCH LIST</div>
+                <ol className="sold-moat-steps">
+                  <li>
+                    <span className="sold-moat-num">01</span>
+                    <div>
+                      <strong>Connect your 0G wallet</strong>
+                      <p>EVM identity — proves who is registering</p>
+                    </div>
+                  </li>
+                  <li>
+                    <span className="sold-moat-num">02</span>
+                    <div>
+                      <strong>Submit your Solana wallet</strong>
+                      <p>Must hold ≥ 100k $ANSEM at verification time</p>
+                    </div>
+                  </li>
+                  <li>
+                    <span className="sold-moat-num">03</span>
+                    <div>
+                      <strong>Alchemy verifies live</strong>
+                      <p>On-chain read, no off-chain trust, no screenshots</p>
+                    </div>
+                  </li>
+                  <li>
+                    <span className="sold-moat-num">04</span>
+                    <div>
+                      <strong>You're in the next window</strong>
+                      <p>The community bets on you every 12h</p>
+                    </div>
+                  </li>
+                </ol>
+                <div className="sold-moat-card-note">
+                  Your wallet is read-only. Nothing is moved. Your on-chain actions speak for themselves.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ── VS SECTION ── */}
       <section className="sold-vs-section" aria-label="Choose your game">
@@ -131,18 +203,17 @@ export function SoldLanding() {
           <div className="sold-vs-eyebrow">TWO GAMES. ONE UNIVERSE.</div>
           <div className="sold-vs-grid">
 
-            {/* WHO SOLD */}
             <div className="sold-vs-card sold-vs-card--sold">
               <div className="sold-vs-card-tag">PREDICTION MARKET</div>
               <div className="sold-vs-card-logo">WHO<br />SOLD<span>?</span></div>
               <p className="sold-vs-card-desc">
-                Track $ANSEM's biggest holders. Call who dumps before the 12-hour window closes.
-                Parimutuel payouts — the market sets the odds.
+                Track $ANSEM airdrop recipients. Bet on who dumps within the 12-hour window.
+                Parimutuel payouts — the market sets the odds. Oracle reads Solana live.
               </p>
               <ul className="sold-vs-card-traits">
-                <li>On-chain oracle via Alchemy</li>
-                <li>Individual picks + batch cohorts</li>
-                <li>Earn $GG when you call it right</li>
+                <li>Real wallets. Real on-chain behavior.</li>
+                <li>Individual picks + batch airdrop cohorts</li>
+                <li>Earn {EVIL_TOKEN_LIVE ? EVIL_TOKEN_TICKER : BET_TOKEN} when you call it right</li>
               </ul>
               <div className="sold-vs-card-ctas">
                 <Link className="btn btn-gold" to="/sold/play">▶ Enter Market</Link>
@@ -150,23 +221,21 @@ export function SoldLanding() {
               </div>
             </div>
 
-            {/* VS divider */}
             <div className="sold-vs-divider">
               <div className="sold-vs-divider-line" />
               <div className="sold-vs-divider-badge">VS</div>
               <div className="sold-vs-divider-line" />
             </div>
 
-            {/* WHO RUGGED */}
             <div className="sold-vs-card sold-vs-card--rugged">
               <div className="sold-vs-card-tag">SOCIAL DEDUCTION</div>
               <div className="sold-vs-card-logo sold-vs-card-logo--rugged">WHO<br />RUGGED<span>?</span></div>
               <p className="sold-vs-card-desc">
-                Five suspects. One drained the vault. Roles sealed in a hardware enclave,
-                pot settles on-chain. Zero trust, provably fair.
+                Five suspects. One drained the vault. Roles sealed in a TEE,
+                pot settles on-chain. Read between the lies. Make the accusation.
               </p>
               <ul className="sold-vs-card-traits sold-vs-card-traits--rugged">
-                <li>TEE-attested roles, no admin peek</li>
+                <li>TEE-attested roles — no admin peek</li>
                 <li>Staked bond on every accusation</li>
                 <li>Verdicts stored on 0G Network</li>
               </ul>
@@ -180,22 +249,22 @@ export function SoldLanding() {
         </div>
       </section>
 
-      {/* ── THREE MODES ── */}
+      {/* ── HOW IT WORKS ── */}
       <section id="how">
         <div className="wrap">
-          <div className="eyebrow">Choose your play</div>
+          <div className="eyebrow">The mechanics</div>
           <h2 className="sec-h">Three ways to <span className="u">participate</span></h2>
           <p className="lead">
-            Bet on individual wallets, bet on an entire airdrop cohort, or add your own wallet
-            to be tracked. Every route earns $GG.
+            Bet on individual wallets, bet on an entire airdrop cohort, or register your own
+            wallet and let the market bet on you.
           </p>
           <div className="three">
             <div className="ico-card">
               <div className="ic">◎</div>
               <h4>Individual Picks</h4>
               <p>
-                Pick a holder — blknoiz06, cryptowhizz, nockchain, the 261x trader — and
-                call whether they sell before the 12h window closes.
+                Choose a specific recipient and call whether they sell before the 12h window
+                closes. YES = they dump. NO = they hold. Simple on-chain resolution.
               </p>
               <span className="tag-pill">YES / NO · fixed window</span>
             </div>
@@ -204,16 +273,16 @@ export function SoldLanding() {
               <h4>Batch Markets</h4>
               <p>
                 After an airdrop, bet on what <em style={{ color: 'var(--alarm)' }}>percentage</em> of
-                recipients dump within 24h. Parimutuel odds — the market sets the line.
+                the entire cohort dumps within 24h. Parimutuel — the community sets the line.
               </p>
               <span className="tag-pill">COHORT % · parimutuel</span>
             </div>
             <div className="ico-card">
               <div className="ic">✦</div>
-              <h4>Join & Be Tracked</h4>
+              <h4>Be the Target</h4>
               <p>
-                Hold ≥ 100k $ANSEM? Add your Solana wallet. The community bets on you —
-                and you earn extra $GG every window your balance stays untouched.
+                Register your wallet. The community bets on you every window.
+                Hold and earn. Dump and they earn. Your reputation is permanently on-chain.
               </p>
               <span className="tag-pill">100k $ANSEM minimum</span>
             </div>
@@ -230,22 +299,25 @@ export function SoldLanding() {
             <div className="step">
               <div className="no">01</div>
               <h4>Snapshot</h4>
-              <p>Window opens. Every tracked wallet's $ANSEM balance is recorded via Alchemy.</p>
+              <p>Window opens. Every tracked wallet's $ANSEM balance is read via Alchemy on Solana mainnet.</p>
             </div>
             <div className="step">
               <div className="no">02</div>
               <h4>Predict</h4>
-              <p>Community places YES or NO bets with $GG stakes. Odds update live as the pool grows.</p>
+              <p>Community places bets. Odds update live as the pool fills. Early bettors set the line.</p>
             </div>
             <div className="step">
               <div className="no">03</div>
               <h4>Oracle</h4>
-              <p>At close, Alchemy reads final balances. A balance drop &gt;10% counts as a sell.</p>
+              <p>At close, Alchemy reads final balances. A drop &gt;10% counts as a sell. No humans involved.</p>
             </div>
             <div className="step">
               <div className="no">04</div>
               <h4>Settle</h4>
-              <p>Correct predictors split the pool. Batch winners get parimutuel payouts. Scores update.</p>
+              <p>
+                Correct predictors split the pool. Payouts are automatic.
+                The blockchain remembers who sold.
+              </p>
             </div>
           </div>
         </div>
@@ -254,17 +326,17 @@ export function SoldLanding() {
       {/* ── MARKET MECHANIC ── */}
       <section>
         <div className="wrap">
-          <div className="eyebrow">Why this isn't a fixed bet</div>
-          <h2 className="sec-h">Parimutuel odds — <span className="u">the market sets the line</span></h2>
+          <div className="eyebrow">The payout model</div>
+          <h2 className="sec-h">Parimutuel — <span className="u">the market sets the line</span></h2>
           <p className="lead">
-            Unlike sportsbooks, there's no house edge and no fixed payout. Your winnings
-            depend on how many people bet wrong.
+            No house edge. No fixed payout. Your winnings depend entirely on how many people
+            bet wrong. The more consensus, the worse the odds for latecomers.
           </p>
           <div className="sold-mechanic">
-            <div className="sold-mechanic-title">LIVE ODDS EXAMPLE — "WILL BLKNOIZ06 SELL?"</div>
+            <div className="sold-mechanic-title">LIVE ODDS EXAMPLE — "WILL BLKNOIZ06 DUMP?"</div>
             <div className="sold-odds-demo">
               <div className="sold-odds-bar-wrap">
-                <span style={{ fontSize: 11, color: 'var(--alarm)', width: 40 }}>SELLS</span>
+                <span style={{ fontSize: 11, color: 'var(--alarm)', width: 44 }}>DUMPS</span>
                 <div className="sold-odds-bar">
                   <div className="sold-odds-fill-yes" style={{ width: '62%' }} />
                   <div className="sold-odds-fill-no" style={{ width: '38%' }} />
@@ -272,14 +344,14 @@ export function SoldLanding() {
                 <span style={{ fontSize: 11, color: 'var(--lime)', width: 40, textAlign: 'right' }}>HOLDS</span>
               </div>
               <div className="sold-odds-labels">
-                <span className="yes">62% of pool · 3,100 $GG</span>
-                <span className="no">38% · 1,900 $GG</span>
+                <span className="yes">62% of pool · 3,100 {BET_TOKEN}</span>
+                <span className="no">38% · 1,900 {BET_TOKEN}</span>
               </div>
             </div>
             <div className="sold-mechanic-body">
-              If SELLS wins: each YES bettor gets their stake back <b>+ proportional share of the 1,900 $GG NO pool</b>.<br />
-              If HOLDS wins: each NO bettor splits the 3,100 $GG YES pool proportionally.<br />
-              <b>Early bettors set the line. Late bettors react to it.</b> The market finds consensus.
+              If DUMPS wins: each YES bettor gets their stake back <b>+ proportional share of the 1,900 {BET_TOKEN} NO pool</b>.<br />
+              If HOLDS wins: each NO bettor splits the 3,100 {BET_TOKEN} YES pool proportionally.<br />
+              <b>Early bettors move the line. Late bettors absorb risk.</b> The market finds truth.
             </div>
           </div>
 
@@ -288,11 +360,11 @@ export function SoldLanding() {
             <span className="arr">▶</span>
             <span className="node">Stakes pool</span>
             <span className="arr">▶</span>
-            <span className="node"><b>Alchemy</b> reads balance</span>
+            <span className="node"><b>Alchemy</b> reads chain</span>
             <span className="arr">▶</span>
             <span className="node">DO alarm fires</span>
             <span className="arr">▶</span>
-            <span className="node"><b>$GG settles</b></span>
+            <span className="node"><b>{BET_TOKEN} settles</b></span>
           </div>
         </div>
       </section>
@@ -300,17 +372,17 @@ export function SoldLanding() {
       {/* ── ANSEM SECTION ── */}
       <section>
         <div className="wrap">
-          <div className="eyebrow">The target</div>
-          <h2 className="sec-h">Public information. <span className="u">Everyone's watching.</span></h2>
+          <div className="eyebrow">The original suspect</div>
+          <h2 className="sec-h">He posted the wallet. <span className="u">CT is watching.</span></h2>
           <p className="lead">
-            Ansem posted his wallet publicly. It holds 58.66% of the entire $ANSEM supply.
-            Every move is on-chain, forever. We just built the bet around it.
+            Ansem's wallet holds 58.66% of the entire $ANSEM supply. He posted it publicly.
+            Every move is permanently on-chain. The market just made the watching worth something.
           </p>
           <div className="sold-ansem-block">
             <div className="sold-ansem-stat">
-              <span className="sold-ansem-stat-label">HOLDINGS</span>
+              <span className="sold-ansem-stat-label">SUPPLY HELD</span>
               <span className="sold-ansem-stat-val">58.66%</span>
-              <span className="sold-ansem-stat-sub">of total $ANSEM supply</span>
+              <span className="sold-ansem-stat-sub">of 1B $ANSEM total</span>
             </div>
             <div className="sold-ansem-divider" />
             <div className="sold-ansem-stat">
@@ -320,32 +392,56 @@ export function SoldLanding() {
             </div>
             <div className="sold-ansem-divider" />
             <div className="sold-ansem-body">
-              <b>blknoiz06</b> — one of the most followed traders on X — publicly shared this wallet.
-              Every transfer is observable. The prediction market simply makes the observation worth
-              something: bet on whether he moves before the window closes.
+              <b>blknoiz06</b> is one of the most-followed traders on CT. He named the token after himself,
+              deployed it on pump.fun, and posted the wallet. Every single transfer is public.
+              The question the community has been asking since day one:
+              <br /><br />
+              <em style={{ color: 'var(--alarm)', fontStyle: 'normal', fontWeight: 700 }}>
+                "Will he dump on us?"
+              </em>
               <div className="sold-ansem-wallet">
                 GV6UUmNxz2RpKxmNAPadYKb7uQpszwqQAu3qLJxVdC52
               </div>
             </div>
           </div>
           <span className="sold-big">
-            The bet isn't on a price. It's on behavior — and behavior is verifiable.
+            The bet isn't on a price. It's on a person — and people are observable.
           </span>
         </div>
       </section>
+
+      {/* ── EVIL ANSEM TEASER ── */}
+      {!EVIL_TOKEN_LIVE && (
+        <section className="sold-evil-section">
+          <div className="wrap">
+            <div className="sold-evil-inner">
+              <div className="sold-evil-badge">⚡ COMING SOON</div>
+              <div className="sold-evil-title">$EVIL ANSEM</div>
+              <p className="sold-evil-body">
+                The native betting token for WHO SOLD? is on its way.
+                {BET_TOKEN} bets will migrate. Early participants get priority access.
+                Follow for launch.
+              </p>
+              <div className="sold-evil-note">
+                Currently using {BET_TOKEN} points for all bets. Token launch converts balances 1:1.
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── LIVE WINDOW ── */}
       {liveWindow && (
         <section>
           <div className="wrap">
             <div className="eyebrow">Right now</div>
-            <h2 className="sec-h">Current window is <span className="u">open</span></h2>
+            <h2 className="sec-h">Window is <span className="u">open</span></h2>
             <div className="sold-live-strip">
               <span className="sold-live-dot" />
-              <span className="sold-live-label">WINDOW CLOSES IN</span>
+              <span className="sold-live-label">CLOSES IN</span>
               <span className="sold-live-countdown">{countdown}</span>
               <span className="sold-live-holders">
-                {liveWindow.holders.length} holders tracked · window {liveWindow.windowId}
+                {liveWindow.holders.length} suspects tracked · {liveWindow.windowId}
               </span>
               <div className="sold-live-cta">
                 <Link className="btn btn-gold" to="/sold/play">
@@ -357,61 +453,25 @@ export function SoldLanding() {
         </section>
       )}
 
-      {/* ── JOIN SECTION ── */}
-      <section id="join">
-        <div className="wrap">
-          <div className="eyebrow">Hold $ANSEM?</div>
-          <h2 className="sec-h">Get tracked. <span className="u">Let the market bet on you.</span></h2>
-          <p className="lead">
-            Any wallet holding ≥ 100k $ANSEM can register. Once added, the community bets on
-            your every move — and you earn $GG when you don't sell.
-          </p>
-          <div className="sold-join-grid">
-            <div className="sold-join-card">
-              <h4>TO REGISTER</h4>
-              <ul>
-                <li>Connect your 0G wallet (EVM, for identity)</li>
-                <li>Enter your Solana wallet address</li>
-                <li>We verify you hold ≥ 100k $ANSEM live via Alchemy</li>
-                <li>You appear in the next window's holder list</li>
-              </ul>
-              <div style={{ marginTop: 16 }}>
-                <Link className="btn btn-ghost" to="/sold/play">
-                  Register Wallet →
-                </Link>
-              </div>
-            </div>
-            <div className="sold-join-card">
-              <h4>WHAT BEING TRACKED MEANS</h4>
-              <p>
-                Your $ANSEM balance is read at window open and window close — read-only,
-                nothing is moved. If you don't sell, predictors who bet HOLDS earn. If you do
-                sell, predictors who bet SELLS earn. Your reputation is on-chain.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ── FOOTER ── */}
       <footer>
         <div className="wrap">
           <div className="marq">
             <span>
-              ◉ WHO SOLD ◉ $ANSEM ◉ ON-CHAIN ORACLE ◉ PARIMUTUEL MARKET ◉ 12H WINDOWS ◉
-              INDIVIDUAL PICKS ◉ BATCH COHORTS ◉ REGISTER YOUR WALLET ◉ WHO RUGGED ◉ FIVE SUSPECTS ◉
-              ONE THIEF ◉ TEE-ATTESTED ◉ 0G NETWORK ◉ WHO SOLD ◉ $ANSEM ◉ ON-CHAIN ORACLE ◉
+              ◉ WHO SOLD ◉ $ANSEM ◉ AIRDROP BETRAYAL MARKET ◉ ON-CHAIN ORACLE ◉ PARIMUTUEL ◉
+              12H WINDOWS ◉ INDIVIDUAL PICKS ◉ BATCH COHORTS ◉ $EVIL ANSEM COMING ◉
+              WHO RUGGED ◉ FIVE SUSPECTS ◉ ONE THIEF ◉ TEE-ATTESTED ◉ 0G NETWORK ◉
             </span>
           </div>
           <div className="links">
             <a href="#how">HOW IT WORKS</a>
-            <a href="#join">JOIN</a>
+            <a href="#moat">JOIN</a>
             <Link to="/sold/play">ENTER MARKET</Link>
             <Link to="/who-rugged" style={{ color: 'var(--cyan, #00d4ff)' }}>WHO RUGGED? →</Link>
           </div>
           <p className="fine">
-            A prediction market on $ANSEM holder behavior. On-chain oracle via Alchemy + Solana.
-            Built alongside WHO RUGGED? on 0G, 2026.
+            A prediction market on $ANSEM airdrop behavior. On-chain oracle via Alchemy + Solana.
+            Built alongside WHO RUGGED? on 0G, 2026. $EVIL ANSEM token coming soon.
           </p>
         </div>
       </footer>

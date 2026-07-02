@@ -1,4 +1,5 @@
 import type { TrackedHolder, Prediction } from './soldTypes'
+import { BET_TOKEN, DEFAULT_STAKE } from './soldConfig'
 
 interface Props {
   holder: TrackedHolder
@@ -7,7 +8,7 @@ interface Props {
   onVote: (wallet: string, vote: 'yes' | 'no') => void
 }
 
-const STAKE = 50 // fixed $GG stake per prediction for now
+const STAKE = DEFAULT_STAKE
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
@@ -32,7 +33,7 @@ export function PredictionCard({ holder, myPrediction, disabled, onVote }: Props
         <span className="sold-card-handle">@{holder.handle}</span>
         <span className="sold-card-balance">
           {holder.balanceNow !== null
-            ? `${holder.balanceNow === 0 ? '—' : fmt(holder.balanceNow)} → ${holder.balanceNow < holder.balanceAtSnapshot ? 'SOLD' : 'HELD'}`
+            ? `${holder.balanceNow === 0 ? '—' : fmt(holder.balanceNow)} → ${holder.balanceNow < holder.balanceAtSnapshot ? '🔴 DUMPED' : '🟢 HELD'}`
             : holder.balanceAtSnapshot > 0
               ? `${fmt(holder.balanceAtSnapshot)} $ANSEM`
               : 'oracle syncing…'}
@@ -43,15 +44,15 @@ export function PredictionCard({ holder, myPrediction, disabled, onVote }: Props
         <button
           className={`sold-btn sold-btn-yes${voted === 'yes' ? ' active' : ''}`}
           disabled={disabled}
-          title={`Bet ${STAKE} $GG they sell`}
+          title={`Bet ${STAKE} ${BET_TOKEN} they dump`}
           onClick={() => onVote(holder.wallet, 'yes')}
         >
-          SELLS
+          DUMPS
         </button>
         <button
           className={`sold-btn sold-btn-no${voted === 'no' ? ' active' : ''}`}
           disabled={disabled}
-          title={`Bet ${STAKE} $GG they hold`}
+          title={`Bet ${STAKE} ${BET_TOKEN} they hold`}
           onClick={() => onVote(holder.wallet, 'no')}
         >
           HOLDS
