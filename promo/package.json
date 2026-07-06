@@ -1,0 +1,26 @@
+{
+  "name": "who-sold-promo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WHO SOLD? — Airdrop Betrayal Market promo film (Remotion)",
+  "scripts": {
+    "start": "remotion studio",
+    "vo": "node scripts/generate-vo.mjs",
+    "render": "remotion render WhoSold out/who-sold.mp4",
+    "build": "npm run vo && npm run render",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@remotion/google-fonts": "^4.0.0",
+    "@remotion/transitions": "^4.0.482",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.4.5"
+  }
+}

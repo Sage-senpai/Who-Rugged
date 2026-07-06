@@ -1,0 +1,25 @@
+{
+  "outDir": "public/vo",
+  "lines": [
+    {
+      "id": "s1_pings",
+      "text": "Three A.M. Your wallet buzzes. Two hundred fifty thousand dollars in ANSEM. Airdropped. Free."
+    },
+    {
+      "id": "s2_rush",
+      "text": "You don't read the thread. You don't check the docs. You open the chart... and you reach for sell."
+    },
+    {
+      "id": "s3_watched",
+      "text": "But your wallet is public. And crypto twitter already made a market out of you. Sixty-two percent say you dump."
+    },
+    {
+      "id": "s4_oracle",
+      "text": "You sell. The oracle reads the chain. And everyone who called it... just got paid."
+    },
+    {
+      "id": "s5_promo",
+      "text": "Who sold? The blockchain remembers. And now the community gets paid to watch."
+    }
+  ]
+}
