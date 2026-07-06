@@ -9,7 +9,6 @@ import { ThemeProvider } from './theme/ThemeContext'
 import { NetworkProvider } from './wallet/NetworkContext'
 import { WalletProvider } from './wallet/WalletContext'
 import { SolanaProvider } from './wallet/SolanaContext'
-import { IdentityProvider } from './wallet/IdentityContext'
 
 // Route-level code splitting: the landing no longer ships the game engine and
 // DiceBear, and each screen loads on demand.
@@ -33,7 +32,6 @@ export default function App() {
       <NetworkProvider>
         <WalletProvider>
         <SolanaProvider>
-        <IdentityProvider>
         <a className="skip-link" href="#main">
           Skip to content
         </a>
@@ -57,7 +55,6 @@ export default function App() {
             <Route path="*" element={<SoldLanding />} />
           </Routes>
         </Suspense>
-        </IdentityProvider>
         </SolanaProvider>
         </WalletProvider>
       </NetworkProvider>

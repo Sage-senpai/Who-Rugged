@@ -107,6 +107,16 @@
 .wm-note { margin: 6px 4px 2px; font-size: 11px; color: #7d8bb0; line-height: 1.4; }
 .wm-note b { color: #eef2ff; }
 
+.wm-panel--sol { width: 300px; }
+.wm-mini-addr {
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  font-size: 12px; color: #aab4cf; word-break: break-all;
+  background: rgba(4, 6, 13, 0.5); border: 1px solid rgba(125, 139, 176, 0.16);
+  border-radius: 8px; padding: 10px 12px; margin-bottom: 10px;
+}
+.wm-disc { width: 100%; justify-content: center; padding: 10px; }
+
 @media (max-width: 480px) {
   .wm-panel { width: min(340px, calc(100vw - 32px)); right: -8px; }
+  .wm-panel--sol { width: min(300px, calc(100vw - 32px)); }
 }

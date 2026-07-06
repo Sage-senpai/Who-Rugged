@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useIdentity } from '../wallet/IdentityContext'
+import { useSolana } from '../wallet/SolanaContext'
 import { WalletMenu } from '../wallet/WalletMenu'
 import { getCurrentWindow } from './soldClient'
 import { SoldNav } from './SoldNav'
@@ -39,7 +39,7 @@ function useCountdown(closesAt: number | null) {
 }
 
 export function SoldLanding() {
-  const { address } = useIdentity()
+  const { address } = useSolana()
   const [liveWindow, setLiveWindow] = useState<PredictionWindow | null>(null)
   const countdown = useCountdown(liveWindow?.closesAt ?? null)
 
@@ -162,8 +162,8 @@ export function SoldLanding() {
                   <li>
                     <span className="sold-moat-num">01</span>
                     <div>
-                      <strong>Connect your wallet</strong>
-                      <p>Solana or 0G — proves who is registering</p>
+                      <strong>Connect your Solana wallet</strong>
+                      <p>Phantom or Solflare — proves who is registering</p>
                     </div>
                   </li>
                   <li>

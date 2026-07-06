@@ -1,18 +1,14 @@
-/* Unified wallet control for the WHO SOLD? side: connect either a Solana wallet
-   (Phantom/Solflare) or a 0G/EVM wallet, keep both, and pick which is the
-   active betting identity. Both live side by side per the product decision. */
+/* Solana wallet control for the WHO SOLD? side. Who Sold is Solana-only — the
+   airdrop, the wallets, and the oracle all live on Solana — so this connects
+   Phantom/Solflare and nothing else. (WHO RUGGED? keeps its own 0G wallet.) */
 import { useEffect, useRef, useState } from 'react'
-import { useWallet } from './WalletContext'
 import { useSolana } from './SolanaContext'
-import { useIdentity } from './IdentityContext'
 import { shortAddress } from './identity'
 import { sfx } from '../lib/sfx'
 import './wallet-menu.css'
 
 export function WalletMenu() {
-  const evm = useWallet()
-  const sol = useSolana()
-  const { active, preferred, prefer } = useIdentity()
+  const { status, address, connect, disconnect } = useSolana()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -25,114 +21,47 @@ export function WalletMenu() {
     return () => document.removeEventListener('mousedown', onDoc)
   }, [open])
 
-  const label = active
-    ? `${active.kind === 'sol' ? '◎' : '⬡'} ${shortAddress(active.address)}`
-    : '◇ Connect wallet'
+  if (status === 'no-wallet') {
+    return (
+      <a className="wm-trigger" href="https://phantom.app/download" target="_blank" rel="noreferrer">
+        ◎ Get a Solana wallet
+      </a>
+    )
+  }
 
-  return (
-    <div className="wm" ref={ref}>
-      <button
-        className={`wm-trigger${active ? ' on' : ''}`}
-        onClick={() => { sfx.play('select'); setOpen((v) => !v) }}
-        aria-expanded={open}
-        aria-haspopup="menu"
-      >
-        {active && <span className={`wm-dot ${active.kind}`} />}
-        {label}
-        <span className="wm-caret">▾</span>
-      </button>
-
-      {open && (
-        <div className="wm-panel" role="menu">
-          <div className="wm-panel-title">CHOOSE A WALLET</div>
-
-          {/* ── Solana ── */}
-          <WalletRow
-            icon="◎"
-            name="Solana"
-            sub="Phantom · Solflare"
-            accent="sol"
-            status={sol.status}
-            address={sol.address}
-            isActive={active?.kind === 'sol'}
-            isPreferred={preferred === 'sol'}
-            onConnect={() => { sfx.play('select'); void sol.connect() }}
-            onUse={() => prefer('sol')}
-            onDisconnect={() => sol.disconnect()}
-            noWalletHref="https://phantom.app/download"
-          />
-
-          {/* ── 0G / EVM ── */}
-          <WalletRow
-            icon="⬡"
-            name="0G Network"
-            sub="MetaMask · EVM"
-            accent="evm"
-            status={evm.status}
-            address={evm.address}
-            isActive={active?.kind === 'evm'}
-            isPreferred={preferred === 'evm'}
-            onConnect={() => { sfx.play('select'); void evm.connect() }}
-            onUse={() => prefer('evm')}
-            onDisconnect={() => evm.disconnect()}
-            noWalletHref="https://metamask.io/download/"
-          />
-
-          <p className="wm-note">
-            Both can stay connected. Your bets key to the <b>active</b> wallet.
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-interface RowProps {
-  icon: string
-  name: string
-  sub: string
-  accent: 'sol' | 'evm'
-  status: string
-  address: string | null
-  isActive: boolean
-  isPreferred: boolean
-  onConnect: () => void
-  onUse: () => void
-  onDisconnect: () => void
-  noWalletHref: string
-}
-
-function WalletRow({
-  icon, name, sub, accent, status, address, isActive, onConnect, onUse, onDisconnect, noWalletHref,
-}: RowProps) {
-  const connected = status === 'connected' && !!address
-  return (
-    <div className={`wm-row wm-row--${accent}${isActive ? ' active' : ''}`}>
-      <div className="wm-row-id">
-        <span className="wm-row-icon">{icon}</span>
-        <div className="wm-row-text">
-          <span className="wm-row-name">
-            {name}
-            {isActive && <span className="wm-badge">ACTIVE</span>}
-          </span>
-          <span className="wm-row-sub">{connected ? shortAddress(address!) : sub}</span>
-        </div>
-      </div>
-
-      <div className="wm-row-actions">
-        {status === 'no-wallet' ? (
-          <a className="wm-btn ghost" href={noWalletHref} target="_blank" rel="noreferrer">Install</a>
-        ) : connected ? (
-          <>
-            {!isActive && <button className="wm-btn use" onClick={onUse}>Use</button>}
-            <button className="wm-btn ghost" onClick={onDisconnect} title="Disconnect">✕</button>
-          </>
-        ) : (
-          <button className="wm-btn connect" disabled={status === 'connecting'} onClick={onConnect}>
-            {status === 'connecting' ? '…' : 'Connect'}
-          </button>
+  if (status === 'connected' && address) {
+    return (
+      <div className="wm" ref={ref}>
+        <button
+          className="wm-trigger on"
+          onClick={() => { sfx.play('select'); setOpen((v) => !v) }}
+          aria-expanded={open}
+          aria-haspopup="menu"
+        >
+          <span className="wm-dot sol" />
+          ◎ {shortAddress(address)}
+          <span className="wm-caret">▾</span>
+        </button>
+        {open && (
+          <div className="wm-panel wm-panel--sol" role="menu">
+            <div className="wm-panel-title">SOLANA WALLET</div>
+            <div className="wm-mini-addr">{address}</div>
+            <button className="wm-btn ghost wm-disc" onClick={() => { disconnect(); setOpen(false) }}>
+              Disconnect
+            </button>
+          </div>
         )}
       </div>
-    </div>
+    )
+  }
+
+  return (
+    <button
+      className="wm-trigger"
+      disabled={status === 'connecting'}
+      onClick={() => { sfx.play('select'); void connect() }}
+    >
+      ◎ {status === 'connecting' ? 'Connecting…' : 'Connect Solana'}
+    </button>
   )
 }

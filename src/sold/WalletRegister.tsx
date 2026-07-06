@@ -49,7 +49,7 @@ export function WalletRegister({ onRegister, connected }: Props) {
   if (!connected) {
     return (
       <div className="sold-register-wrap">
-        <p className="sold-register-notice">Connect your 0G wallet first to register your Solana address.</p>
+        <p className="sold-register-notice">Connect your Solana wallet first to register.</p>
       </div>
     )
   }

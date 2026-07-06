@@ -5,7 +5,7 @@ import { ResolutionBanner } from './ResolutionBanner'
 import { WalletRegister } from './WalletRegister'
 import { BatchCard } from './BatchCard'
 import { SoldNav } from './SoldNav'
-import { useIdentity } from '../wallet/IdentityContext'
+import { useSolana } from '../wallet/SolanaContext'
 import { useMarkets } from './market/useMarkets'
 import { HolderMarketCard } from './market/HolderMarketCard'
 import type { BucketId } from './market/buckets'
@@ -15,7 +15,7 @@ import './market/market.css'
 type Tab = 'picks' | 'batch' | 'join'
 
 export function WhoSold() {
-  const { address } = useIdentity()
+  const { address } = useSolana()
   const { window, leaderboard, register, predictBatch, activeBatch } = useSold(address ?? null)
   const markets = useMarkets(address ?? null)
   const [tab, setTab] = useState<Tab>('picks')
