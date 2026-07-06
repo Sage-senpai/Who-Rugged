@@ -1,52 +1,38 @@
 import { useCallback, useState } from 'react'
 import { useSold } from './useSold'
-import { BET_TOKEN } from './soldConfig'
-import { HolderLeaderboard } from './HolderLeaderboard'
 import { PredictorRankings } from './PredictorRankings'
 import { ResolutionBanner } from './ResolutionBanner'
 import { WalletRegister } from './WalletRegister'
 import { BatchCard } from './BatchCard'
 import { SoldNav } from './SoldNav'
-import { useWallet } from '../wallet/WalletContext'
+import { useIdentity } from '../wallet/IdentityContext'
+import { useMarkets } from './market/useMarkets'
+import { HolderMarketCard } from './market/HolderMarketCard'
+import type { BucketId } from './market/buckets'
 import './sold.css'
+import './market/market.css'
 
-const STAKE = 50
 type Tab = 'picks' | 'batch' | 'join'
 
 export function WhoSold() {
-  const { address } = useWallet()
-  const { status, window, myPredictions, leaderboard, predict, register, predictBatch, activeBatch } = useSold(address ?? null)
+  const { address } = useIdentity()
+  const { window, leaderboard, register, predictBatch, activeBatch } = useSold(address ?? null)
+  const markets = useMarkets(address ?? null)
   const [tab, setTab] = useState<Tab>('picks')
   const [batchVotes, setBatchVotes] = useState<Record<string, 'yes' | 'no'>>({})
 
-  const handleVote = useCallback(
-    (wallet: string, vote: 'yes' | 'no') => { void predict(wallet, vote, STAKE) },
-    [predict],
+  const handleMarketBet = useCallback(
+    (wallet: string, bucket: BucketId, stake: number) => { markets.place(wallet, bucket, stake) },
+    [markets],
   )
 
   const handleBatchVote = useCallback(
     (batchId: string, vote: 'yes' | 'no') => {
       setBatchVotes((prev) => ({ ...prev, [batchId]: vote }))
-      void predictBatch(batchId, vote, STAKE)
+      void predictBatch(batchId, vote, markets.defaultStake)
     },
-    [predictBatch],
+    [predictBatch, markets.defaultStake],
   )
-
-  if (status === 'unconfigured') {
-    return (
-      <main id="main" className="sold-shell">
-        <p className="sold-loading">WHO SOLD? is not yet configured — set VITE_SOLD_URL and deploy the Worker.</p>
-      </main>
-    )
-  }
-
-  if (status === 'loading' || !window) {
-    return (
-      <main id="main" className="sold-shell">
-        <p className="sold-loading">LOADING WINDOW…</p>
-      </main>
-    )
-  }
 
   return (
     <>
@@ -56,11 +42,11 @@ export function WhoSold() {
         <p className="sold-eyebrow">$ANSEM // PREDICTION MARKET</p>
         <h1 className="sold-title">THE MARKET</h1>
         <p className="sold-subtitle">
-          Real wallets. Live oracle. Bet {BET_TOKEN} on who dumps before the window closes.
+          Real wallets. Live oracle. Parimutuel odds on <b>when</b> each holder dumps.
         </p>
       </header>
 
-      <ResolutionBanner window={window} />
+      {window && <ResolutionBanner window={window} />}
 
       <nav className="sold-tabs">
         <button className={`sold-tab${tab === 'picks' ? ' active' : ''}`} onClick={() => setTab('picks')}>
@@ -75,14 +61,30 @@ export function WhoSold() {
       </nav>
 
       {tab === 'picks' && (
-        <div className="sold-body">
-          <HolderLeaderboard
-            window={window}
-            myPredictions={myPredictions}
-            canPredict={!!address}
-            onVote={handleVote}
-          />
-          <PredictorRankings scores={leaderboard} myAddress={address ?? null} />
+        <div className="mkt-picks">
+          <div className="mkt-legend">
+            <span className="mkt-legend-lab">ODDS</span>
+            <span className="mkt-legend-note">
+              implied probability = each outcome's share of its pool · parimutuel, no house edge
+            </span>
+            <span className={`mkt-legend-mode ${markets.live ? 'live' : 'local'}`}>
+              {markets.live ? '● SHARED POOLS' : '○ LOCAL PREVIEW'}
+            </span>
+          </div>
+          <div className="mkt-grid">
+            {markets.markets.map((m) => (
+              <HolderMarketCard
+                key={m.wallet}
+                market={m}
+                myPosition={markets.positions.find((p) => p.wallet === m.wallet)}
+                canBet={!!address}
+                onBet={handleMarketBet}
+              />
+            ))}
+          </div>
+          <div className="mkt-rankings">
+            <PredictorRankings scores={leaderboard} myAddress={address ?? null} />
+          </div>
         </div>
       )}
 

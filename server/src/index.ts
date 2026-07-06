@@ -11,7 +11,8 @@
 import { DurableObject } from 'cloudflare:workers'
 import { SolanaOracle } from './sold/SolanaOracle'
 import { TRACKED_WALLETS, lookupHolder } from './sold/holderRegistry'
-import type { TrackedHolder, PredictionWindow, Prediction, Resolution, PredictorScore, RegisteredHolder, BatchWindow, BatchResult, BatchPrediction } from './sold/types'
+import { BucketMarket, type OpenHolder } from './sold/BucketMarket'
+import type { TrackedHolder, PredictionWindow, Prediction, Resolution, PredictorScore, RegisteredHolder, BatchWindow, BatchResult, BatchPrediction, BucketId } from './sold/types'
 
 const ANSEM_MINT_DEFAULT = '9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump'
 
@@ -20,6 +21,7 @@ export interface Env {
   CASE_SEAL: DurableObjectNamespace<CaseSeal>
   DIRECTORY: DurableObjectNamespace<Directory>
   PREDICTION_POOL: DurableObjectNamespace<PredictionPool>
+  BUCKET_MARKET: DurableObjectNamespace<BucketMarket>
   OG_COMPUTE_API_URL?: string
   OG_COMPUTE_API_KEY?: string
   OG_COMPUTE_MODEL_ID?: string
@@ -690,6 +692,57 @@ export default {
       const wid = windowId(hours)
       const pool = env.PREDICTION_POOL.getByName(wid)
 
+      // curated + community-registered holders with current balances
+      const buildHolders = async (): Promise<OpenHolder[]> => {
+        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
+        const registered = await env.PREDICTION_POOL.getByName('registry').getRegisteredHolders()
+        const allWallets = [...new Set([...TRACKED_WALLETS, ...registered.map((r) => r.wallet)])]
+        const balances = await oracle.fetchCurrentBalances(allWallets)
+        return balances.map(({ wallet, balance }) => {
+          const reg = registered.find((r) => r.wallet === wallet)
+          const curated = lookupHolder(wallet)
+          return {
+            wallet,
+            handle: reg?.handle ?? curated.handle,
+            avatarSeed: reg?.handle ?? curated.avatarSeed,
+            balanceAtSnapshot: balance,
+          } satisfies OpenHolder
+        })
+      }
+
+      // ── time-bucket markets (Polymarket-style, per-holder) ──
+      if (url.pathname === '/sold/markets' && request.method === 'GET') {
+        const market = env.BUCKET_MARKET.getByName(wid)
+        let state = await market.getMarket()
+        if (!state) {
+          const ms = hours * 3_600_000
+          const opensAt = Math.floor(Date.now() / ms) * ms
+          state = await market.ensureOpen(wid, await buildHolders(), opensAt, opensAt + ms)
+        }
+        return json(state)
+      }
+
+      if (url.pathname === '/sold/market/bet' && request.method === 'POST') {
+        let b: { predictor?: string; wallet?: string; bucket?: string; stake?: number }
+        try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+        if (!b.predictor || !b.wallet || !b.bucket) return json({ error: 'missing-fields' }, 400)
+        const market = env.BUCKET_MARKET.getByName(wid)
+        return json(await market.bet(b.predictor, b.wallet, b.bucket as BucketId, b.stake ?? 50))
+      }
+
+      if (url.pathname === '/sold/market/positions' && request.method === 'GET') {
+        const market = env.BUCKET_MARKET.getByName(wid)
+        return json(await market.getPositions(url.searchParams.get('predictor') ?? undefined))
+      }
+
+      if (url.pathname === '/sold/market/leaderboard' && request.method === 'GET') {
+        return json(await env.BUCKET_MARKET.getByName(wid).getLeaderboard())
+      }
+
+      if (url.pathname === '/sold/market/resolve/manual' && request.method === 'POST') {
+        return json(await env.BUCKET_MARKET.getByName(wid).resolveManual())
+      }
+
       if (url.pathname === '/sold/window/current' && request.method === 'GET') {
         let win = await pool.getWindow()
         if (!win) {
@@ -831,3 +884,6 @@ export default {
     return new Response('not found', { status: 404 })
   },
 } satisfies ExportedHandler<Env>
+
+// Durable Object classes must be exported from the worker entry module.
+export { BucketMarket }

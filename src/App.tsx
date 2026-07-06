@@ -8,9 +8,12 @@ import { SettingsProvider } from './settings/SettingsContext'
 import { ThemeProvider } from './theme/ThemeContext'
 import { NetworkProvider } from './wallet/NetworkContext'
 import { WalletProvider } from './wallet/WalletContext'
+import { SolanaProvider } from './wallet/SolanaContext'
+import { IdentityProvider } from './wallet/IdentityContext'
 
 // Route-level code splitting: the landing no longer ships the game engine and
 // DiceBear, and each screen loads on demand.
+const PathChooser = lazy(() => import('./landing/PathChooser').then((m) => ({ default: m.PathChooser })))
 const Landing = lazy(() => import('./landing/Landing').then((m) => ({ default: m.Landing })))
 const Menu = lazy(() => import('./menu/Menu').then((m) => ({ default: m.Menu })))
 const HowToPlay = lazy(() => import('./menu/HowToPlay').then((m) => ({ default: m.HowToPlay })))
@@ -29,6 +32,8 @@ export default function App() {
       <ThemeProvider>
       <NetworkProvider>
         <WalletProvider>
+        <SolanaProvider>
+        <IdentityProvider>
         <a className="skip-link" href="#main">
           Skip to content
         </a>
@@ -37,7 +42,7 @@ export default function App() {
         <PresenceBeacon />
         <Suspense fallback={<RouteFallback />}>
           <Routes>
-            <Route path="/" element={<SoldLanding />} />
+            <Route path="/" element={<PathChooser />} />
             <Route path="/who-rugged" element={<Landing />} />
             <Route path="/menu" element={<Menu />} />
             <Route path="/how" element={<HowToPlay />} />
@@ -52,6 +57,8 @@ export default function App() {
             <Route path="*" element={<SoldLanding />} />
           </Routes>
         </Suspense>
+        </IdentityProvider>
+        </SolanaProvider>
         </WalletProvider>
       </NetworkProvider>
       </ThemeProvider>

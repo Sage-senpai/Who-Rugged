@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useWallet } from '../wallet/WalletContext'
-import { ConnectButton } from '../wallet/ConnectButton'
+import { useIdentity } from '../wallet/IdentityContext'
+import { WalletMenu } from '../wallet/WalletMenu'
 import { getCurrentWindow } from './soldClient'
 import { SoldNav } from './SoldNav'
 import { BET_TOKEN, EVIL_TOKEN_TICKER, EVIL_TOKEN_LIVE } from './soldConfig'
@@ -39,7 +39,7 @@ function useCountdown(closesAt: number | null) {
 }
 
 export function SoldLanding() {
-  const { address } = useWallet()
+  const { address } = useIdentity()
   const [liveWindow, setLiveWindow] = useState<PredictionWindow | null>(null)
   const countdown = useCountdown(liveWindow?.closesAt ?? null)
 
@@ -93,7 +93,7 @@ export function SoldLanding() {
                   </Link>
                 ) : (
                   <div className="sold-wallet-inline">
-                    <ConnectButton />
+                    <WalletMenu />
                     <Link className="btn btn-ghost" to="/sold/play">
                       Browse without wallet
                     </Link>
@@ -162,8 +162,8 @@ export function SoldLanding() {
                   <li>
                     <span className="sold-moat-num">01</span>
                     <div>
-                      <strong>Connect your 0G wallet</strong>
-                      <p>EVM identity — proves who is registering</p>
+                      <strong>Connect your wallet</strong>
+                      <p>Solana or 0G — proves who is registering</p>
                     </div>
                   </li>
                   <li>

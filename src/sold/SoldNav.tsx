@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useSettings } from '../settings/SettingsContext'
-import { ConnectButton } from '../wallet/ConnectButton'
+import { WalletMenu } from '../wallet/WalletMenu'
 import './sold-nav.css'
 
 interface Props {
@@ -30,8 +30,8 @@ export function SoldNav({ countdown, windowOpen }: Props) {
             </span>
           )}
           <Link
-            to="/"
-            className={`sold-nav-link sold-nav-link--sold${pathname === '/' || pathname === '/sold' ? ' active' : ''}`}
+            to="/sold"
+            className={`sold-nav-link sold-nav-link--sold${pathname === '/sold' ? ' active' : ''}`}
           >
             WHO SOLD?
           </Link>
@@ -49,7 +49,7 @@ export function SoldNav({ countdown, windowOpen }: Props) {
         </div>
 
         <div className="sold-nav-right">
-          <ConnectButton />
+          <WalletMenu />
           <button
             className="sold-nav-sound"
             onClick={() => toggle('music')}

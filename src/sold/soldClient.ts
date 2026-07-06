@@ -1,6 +1,8 @@
 /* HTTP client for the WHO SOLD? Worker routes.
    Env-gated: with no VITE_SOLD_URL configured these are silent no-ops. */
 import type { PredictionWindow, Prediction, PredictorScore, RegisteredHolder, BatchWindow } from './soldTypes'
+import type { HolderMarket, MarketPosition } from './market/marketTypes'
+import type { BucketId } from './market/buckets'
 
 const RAW = import.meta.env.VITE_SOLD_URL as string | undefined
 export const SOLD_URL = RAW ? RAW.replace(/\/$/, '') : undefined
@@ -57,6 +59,31 @@ export const placePrediction = (
     { windowId, wallet, predictor, vote, stake },
     { ok: false, error: 'not-configured' },
   )
+
+// ── time-bucket markets ─────────────────────────────────────────────────────────
+
+export interface ServerMarkets {
+  windowId: string
+  opensAt: number
+  closesAt: number
+  status: 'open' | 'resolving' | 'settled'
+  holders: HolderMarket[]
+}
+
+export const getMarkets = () => get<ServerMarkets | null>('/sold/markets', null)
+
+export const betBucket = (wallet: string, predictor: string, bucket: BucketId, stake: number) =>
+  post<{ ok: boolean; error?: string }>(
+    '/sold/market/bet',
+    { wallet, predictor, bucket, stake },
+    { ok: false, error: 'not-configured' },
+  )
+
+export const getMarketPositions = (predictor: string) =>
+  get<MarketPosition[]>(`/sold/market/positions?predictor=${encodeURIComponent(predictor)}`, [])
+
+export const getMarketLeaderboard = () =>
+  get<PredictorScore[]>('/sold/market/leaderboard', [])
 
 // ── registration ───────────────────────────────────────────────────────────────
 

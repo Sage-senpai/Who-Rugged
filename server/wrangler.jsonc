@@ -8,14 +8,16 @@
       { "name": "LOBBY_ROOM", "class_name": "LobbyRoom" },
       { "name": "CASE_SEAL", "class_name": "CaseSeal" },
       { "name": "DIRECTORY", "class_name": "Directory" },
-      { "name": "PREDICTION_POOL", "class_name": "PredictionPool" }
+      { "name": "PREDICTION_POOL", "class_name": "PredictionPool" },
+      { "name": "BUCKET_MARKET", "class_name": "BucketMarket" }
     ]
   },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["LobbyRoom"] },
     { "tag": "v2", "new_sqlite_classes": ["CaseSeal"] },
     { "tag": "v3", "new_sqlite_classes": ["Directory"] },
-    { "tag": "v4", "new_sqlite_classes": ["PredictionPool"] }
+    { "tag": "v4", "new_sqlite_classes": ["PredictionPool"] },
+    { "tag": "v5", "new_sqlite_classes": ["BucketMarket"] }
   ],
   "observability": { "enabled": true }
 }

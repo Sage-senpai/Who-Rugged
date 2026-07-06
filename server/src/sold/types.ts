@@ -77,3 +77,31 @@ export interface BatchPrediction {
   stake: number
   placedAt: number
 }
+
+// ── time-bucket markets (Polymarket-style, per-holder) ──────────────────────
+// Mirrors src/sold/market/buckets.ts on the frontend.
+export type BucketId = 'lt1h' | 'h1_3' | 'h3_6' | 'h6_12' | 'holds'
+export type BucketPools = Record<BucketId, number>
+
+export interface BucketHolderMarket {
+  wallet: string
+  handle: string
+  avatarSeed: string
+  balanceAtSnapshot: number
+  balanceNow: number | null
+  /** Total staked per outcome — seed liquidity + real bets. */
+  pools: BucketPools
+  bettors: number
+  opensAt: number
+  closesAt: number
+  /** Set once the oracle sampling has resolved the holder's outcome. */
+  resolvedBucket?: BucketId | null
+}
+
+export interface BucketPosition {
+  wallet: string
+  bucket: BucketId
+  stake: number
+  predictor: string
+  placedAt: number
+}
