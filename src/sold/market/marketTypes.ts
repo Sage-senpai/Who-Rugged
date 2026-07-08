@@ -7,8 +7,10 @@ export interface HolderMarket {
   avatarSeed: string
   balanceAtSnapshot: number
   balanceNow: number | null
-  /** Total staked per outcome (seed liquidity + real bets). */
+  /** Displayed pool per outcome (seed liquidity + real bets) — drives odds. */
   pools: Pools
+  /** Real staked points per outcome (backed liquidity) — drives payouts. */
+  realPools?: Pools
   /** Number of distinct positions in the market. */
   bettors: number
   opensAt: number

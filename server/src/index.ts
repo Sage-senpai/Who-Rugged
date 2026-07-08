@@ -717,7 +717,8 @@ export default {
         if (!state) {
           const ms = hours * 3_600_000
           const opensAt = Math.floor(Date.now() / ms) * ms
-          state = await market.ensureOpen(wid, await buildHolders(), opensAt, opensAt + ms)
+          await market.ensureOpen(wid, await buildHolders(), opensAt, opensAt + ms)
+          state = await market.getMarket() // re-read so realPools is always present
         }
         return json(state)
       }

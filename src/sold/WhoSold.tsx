@@ -65,7 +65,8 @@ export function WhoSold() {
           <div className="mkt-legend">
             <span className="mkt-legend-lab">ODDS</span>
             <span className="mkt-legend-note">
-              implied probability = each outcome's share of its pool · parimutuel, no house edge
+              odds = the crowd's read · payouts settle from real stakes only, no house edge ·
+              a market locks the instant that holder is caught selling
             </span>
             <span className={`mkt-legend-mode ${markets.live ? 'live' : 'local'}`}>
               {markets.live ? '● SHARED POOLS' : '○ LOCAL PREVIEW'}
@@ -78,6 +79,7 @@ export function WhoSold() {
                 market={m}
                 myPosition={markets.positions.find((p) => p.wallet === m.wallet)}
                 canBet={!!address}
+                live={markets.live}
                 onBet={handleMarketBet}
               />
             ))}

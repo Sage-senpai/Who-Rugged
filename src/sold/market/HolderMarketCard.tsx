@@ -7,6 +7,8 @@ interface Props {
   market: HolderMarket
   myPosition: MarketPosition | undefined
   canBet: boolean
+  /** true when pools are server-backed — payouts quote from real stakes only. */
+  live: boolean
   onBet: (wallet: string, bucket: BucketId, stake: number) => void
 }
 
@@ -19,10 +21,12 @@ function fmtBal(n: number): string {
 }
 const pct = (p: number) => `${Math.round(p * 100)}%`
 
-export function HolderMarketCard({ market, myPosition, canBet, onBet }: Props) {
+export function HolderMarketCard({ market, myPosition, canBet, live, onBet }: Props) {
   const [stake, setStake] = useState(STAKE_PRESETS[0])
-  const probs = impliedProbs(market.pools)
-  const total = poolTotal(market.pools)
+  const probs = impliedProbs(market.pools) // odds = crowd sentiment (seed + real)
+  // Payouts quote from real stakes only so nothing unbacked is ever promised.
+  const payoutPools = live ? market.realPools ?? market.pools : market.pools
+  const shownPool = live && market.realPools ? poolTotal(market.realPools) : poolTotal(market.pools)
   const closed = Date.now() >= market.closesAt || market.resolvedBucket != null
 
   return (
@@ -42,8 +46,8 @@ export function HolderMarketCard({ market, myPosition, canBet, onBet }: Props) {
           </span>
         </div>
         <div className="mkt-head-pool">
-          <span className="mkt-pool-val">{fmtBal(total)}</span>
-          <span className="mkt-pool-lab">{BET_TOKEN} pool</span>
+          <span className="mkt-pool-val">{fmtBal(shownPool)}</span>
+          <span className="mkt-pool-lab">{live ? `${BET_TOKEN} backed` : `${BET_TOKEN} pool`}</span>
         </div>
       </header>
 
@@ -54,7 +58,7 @@ export function HolderMarketCard({ market, myPosition, canBet, onBet }: Props) {
         {BUCKETS.map((b) => {
           const p = probs[b.id]
           const picked = myPosition?.bucket === b.id
-          const q = quote(market.pools, b.id, stake)
+          const q = quote(payoutPools, b.id, stake)
           const won = market.resolvedBucket === b.id
           const lost = market.resolvedBucket != null && !won
           return (
@@ -88,7 +92,7 @@ export function HolderMarketCard({ market, myPosition, canBet, onBet }: Props) {
             <span className="mkt-pos-body">
               {BUCKETS.find((b) => b.id === myPosition.bucket)?.short} · {myPosition.stake} {BET_TOKEN}
               <span className="mkt-pos-payout">
-                → {quote(market.pools, myPosition.bucket, 0).payout.toFixed(0)} {BET_TOKEN} if right
+                → {quote(payoutPools, myPosition.bucket, 0).payout.toFixed(0)} {BET_TOKEN} if right
               </span>
             </span>
           </div>

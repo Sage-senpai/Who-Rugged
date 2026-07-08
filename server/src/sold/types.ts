@@ -89,8 +89,10 @@ export interface BucketHolderMarket {
   avatarSeed: string
   balanceAtSnapshot: number
   balanceNow: number | null
-  /** Total staked per outcome — seed liquidity + real bets. */
+  /** Displayed pool per outcome — seed liquidity + real bets (drives odds). */
   pools: BucketPools
+  /** Real staked points per outcome (backed liquidity; drives payouts). */
+  realPools?: BucketPools
   bettors: number
   opensAt: number
   closesAt: number

@@ -97,6 +97,7 @@ export function buildMarket(
     balanceAtSnapshot: holder.balanceAtSnapshot,
     balanceNow: holder.balanceNow,
     pools,
+    realPools: { ...mine },
     // seed a believable crowd size alongside real bettors
     bettors: bettors + 6 + (hashStr(holder.wallet) % 40),
     opensAt,
