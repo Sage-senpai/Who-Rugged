@@ -11,15 +11,15 @@ interface Props {
 export function SoldNav({ countdown, windowOpen }: Props) {
   const { settings, toggle } = useSettings()
   const { pathname } = useLocation()
-  const inPlay = pathname === '/sold/play'
+  const inPlay = pathname === '/sold/play' || pathname.startsWith('/arena')
 
   return (
     <nav className="sold-nav">
       <div className="sold-nav-inner">
-        <Link to="/" className="sold-nav-brand">
-          <span className="sold-nav-brand-sold">WHO SOLD?</span>
-          <span className="sold-nav-brand-sep"> × </span>
-          <span className="sold-nav-brand-rugged">WHO RUGGED?</span>
+        <Link to="/arena" className="sold-nav-brand">
+          <span className="sold-nav-brand-sold">WHO RUGGED?</span>
+          <span className="sold-nav-brand-sep"> · </span>
+          <span className="sold-nav-brand-rugged">ARENA</span>
         </Link>
 
         <div className="sold-nav-links">
@@ -30,20 +30,20 @@ export function SoldNav({ countdown, windowOpen }: Props) {
             </span>
           )}
           <Link
-            to="/sold"
-            className={`sold-nav-link sold-nav-link--sold${pathname === '/sold' ? ' active' : ''}`}
+            to="/arena"
+            className={`sold-nav-link sold-nav-link--sold${pathname.startsWith('/arena') ? ' active' : ''}`}
           >
-            WHO SOLD?
+            WHO RUGGED? · ARENA
           </Link>
           <Link
             to="/who-rugged"
             className="sold-nav-link sold-nav-link--rugged"
           >
-            WHO RUGGED?
+            WHO RUGGED? · SUSPECTS
           </Link>
           {!inPlay && (
-            <Link to="/sold/play" className="sold-nav-cta">
-              ENTER MARKET →
+            <Link to="/arena" className="sold-nav-cta">
+              ENTER ARENA →
             </Link>
           )}
         </div>

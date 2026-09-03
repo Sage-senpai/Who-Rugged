@@ -97,4 +97,58 @@ export class SolanaOracle {
       }
     })
   }
+
+  /** Best-effort recent SPL-transfer activity for one wallet on this mint.
+   *  Reads real transaction history via getSignaturesForAddress + getParsedTransaction,
+   *  classifying each by the wallet's token-balance delta: inflow = 'buy', outflow =
+   *  'sell', no owner delta found = 'unknown'. This is NOT DEX-swap-aware — it can't
+   *  distinguish a market buy from a plain incoming transfer — so callers must present
+   *  it as a best-effort read, never as certain intent. Never fabricates rows: returns
+   *  [] (not fake data) when the mint isn't configured or nothing comes back. */
+  async fetchRecentActivity(wallet: string, limit = 10): Promise<ActivityEvent[]> {
+    if (!this.mint) return []
+    const cappedLimit = Math.max(1, Math.min(20, limit))
+    type SigInfo = { signature: string; blockTime: number | null }
+    const sigs = await this.rpcCall<SigInfo[]>(wallet, 'getSignaturesForAddress', [
+      wallet,
+      { limit: cappedLimit },
+    ])
+    if (!sigs?.length) return []
+
+    type TokenBalance = { owner?: string; mint: string; uiTokenAmount: { uiAmount: number | null } }
+    type ParsedTx = {
+      blockTime: number | null
+      meta: { preTokenBalances?: TokenBalance[]; postTokenBalances?: TokenBalance[] } | null
+    }
+
+    const events = await Promise.all(
+      sigs.map(async (s): Promise<ActivityEvent | null> => {
+        const tx = await this.rpcCall<ParsedTx>(s.signature, 'getTransaction', [
+          s.signature,
+          { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 },
+        ])
+        if (!tx?.meta) return null
+        const pre = tx.meta.preTokenBalances?.find((b) => b.mint === this.mint && b.owner === wallet)
+        const post = tx.meta.postTokenBalances?.find((b) => b.mint === this.mint && b.owner === wallet)
+        const before = pre?.uiTokenAmount.uiAmount ?? 0
+        const after = post?.uiTokenAmount.uiAmount ?? 0
+        const delta = after - before
+        if (!pre && !post) return null // this tx didn't touch the wallet's balance for this mint
+        return {
+          signature: s.signature,
+          at: (tx.blockTime ?? s.blockTime ?? 0) * 1000,
+          kind: delta > 0 ? 'buy' : delta < 0 ? 'sell' : 'unknown',
+          amount: Math.abs(delta),
+        }
+      }),
+    )
+    return events.filter((e): e is ActivityEvent => e !== null)
+  }
+}
+
+export interface ActivityEvent {
+  signature: string
+  at: number
+  kind: 'buy' | 'sell' | 'unknown'
+  amount: number
 }

@@ -88,13 +88,13 @@ export function SoldLanding() {
               </p>
               <div className="cta">
                 {address ? (
-                  <Link className="btn btn-gold" to="/sold/play">
-                    ▶ Enter the Market
+                  <Link className="btn btn-gold" to="/arena">
+                    ▶ Enter the Arena
                   </Link>
                 ) : (
                   <div className="sold-wallet-inline">
                     <WalletMenu />
-                    <Link className="btn btn-ghost" to="/sold/play">
+                    <Link className="btn btn-ghost" to="/arena">
                       Browse without wallet
                     </Link>
                   </div>
@@ -204,8 +204,8 @@ export function SoldLanding() {
           <div className="sold-vs-grid">
 
             <div className="sold-vs-card sold-vs-card--sold">
-              <div className="sold-vs-card-tag">PREDICTION MARKET</div>
-              <div className="sold-vs-card-logo">WHO<br />SOLD<span>?</span></div>
+              <div className="sold-vs-card-tag">HOLDER PREDICTION MARKET</div>
+              <div className="sold-vs-card-logo">WHO<br />RUGGED<span>?</span></div>
               <p className="sold-vs-card-desc">
                 Track $ANSEM airdrop recipients. Bet on who dumps within the 12-hour window.
                 Parimutuel payouts — the market sets the odds. Oracle reads Solana live.
@@ -216,7 +216,7 @@ export function SoldLanding() {
                 <li>Earn {EVIL_TOKEN_LIVE ? EVIL_TOKEN_TICKER : BET_TOKEN} when you call it right</li>
               </ul>
               <div className="sold-vs-card-ctas">
-                <Link className="btn btn-gold" to="/sold/play">▶ Enter Market</Link>
+                <Link className="btn btn-gold" to="/arena">▶ Enter Arena</Link>
                 <a className="btn btn-ghost sold-ghost-sold" href="#how">How it works</a>
               </div>
             </div>
@@ -229,7 +229,7 @@ export function SoldLanding() {
 
             <div className="sold-vs-card sold-vs-card--rugged">
               <div className="sold-vs-card-tag">SOCIAL DEDUCTION</div>
-              <div className="sold-vs-card-logo sold-vs-card-logo--rugged">WHO<br />RUGGED<span>?</span></div>
+              <div className="sold-vs-card-logo sold-vs-card-logo--rugged">THE<br />SUSPECTS</div>
               <p className="sold-vs-card-desc">
                 Five suspects. One drained the vault. Roles sealed in a TEE,
                 pot settles on-chain. Read between the lies. Make the accusation.
@@ -444,7 +444,7 @@ export function SoldLanding() {
                 {liveWindow.holders.length} suspects tracked · {liveWindow.windowId}
               </span>
               <div className="sold-live-cta">
-                <Link className="btn btn-gold" to="/sold/play">
+                <Link className="btn btn-gold" to="/arena">
                   ▶ Place Your Bet
                 </Link>
               </div>
@@ -466,8 +466,8 @@ export function SoldLanding() {
           <div className="links">
             <a href="#how">HOW IT WORKS</a>
             <a href="#moat">JOIN</a>
-            <Link to="/sold/play">ENTER MARKET</Link>
-            <Link to="/who-rugged" style={{ color: 'var(--cyan, #00d4ff)' }}>WHO RUGGED? →</Link>
+            <Link to="/arena">ENTER ARENA</Link>
+            <Link to="/who-rugged" style={{ color: 'var(--cyan, #00d4ff)' }}>THE SUSPECTS →</Link>
           </div>
           <p className="fine">
             A prediction market on $ANSEM airdrop behavior. On-chain oracle via Alchemy + Solana.

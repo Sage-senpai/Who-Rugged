@@ -24,6 +24,12 @@ import type {
   BucketPools,
   BucketHolderMarket,
   BucketPosition,
+  BinarySide,
+  BinaryPools,
+  BinaryPosition,
+  MagnitudeBand,
+  MagnitudePools,
+  MagnitudePosition,
   PredictorScore,
 } from './types'
 
@@ -44,6 +50,22 @@ const HOUR = 3_600_000
 const BUCKET_IDS: BucketId[] = ['lt1h', 'h1_3', 'h3_6', 'h6_12', 'holds']
 const emptyPools = (): BucketPools => ({ lt1h: 0, h1_3: 0, h3_6: 0, h6_12: 0, holds: 0 })
 
+const BINARY_SIDES: BinarySide[] = ['yes', 'no']
+const emptyBinaryPools = (): BinaryPools => ({ yes: 0, no: 0 })
+
+const MAGNITUDE_BANDS: MagnitudeBand[] = ['b0_10', 'b10_25', 'b25_50', 'b50_75', 'b75_100']
+const emptyMagnitudePools = (): MagnitudePools => ({ b0_10: 0, b10_25: 0, b25_50: 0, b50_75: 0, b75_100: 0 })
+
+/** Which magnitude band a real (before-after)/before drop ratio falls into. */
+function bandForRatio(ratio: number): MagnitudeBand {
+  const pct = Math.max(0, Math.min(1, ratio)) * 100
+  if (pct <= 10) return 'b0_10'
+  if (pct <= 25) return 'b10_25'
+  if (pct <= 50) return 'b25_50'
+  if (pct <= 75) return 'b50_75'
+  return 'b75_100'
+}
+
 /** Which timed bucket a sell first detected at `elapsedHours` since open belongs to. */
 function bucketForElapsed(elapsedHours: number): BucketId {
   if (elapsedHours <= 1) return 'lt1h'
@@ -56,6 +78,18 @@ function bucketForElapsed(elapsedHours: number): BucketId {
 function realPoolsFor(positions: BucketPosition[], wallet: string): BucketPools {
   const pools = emptyPools()
   for (const p of positions) if (p.wallet === wallet) pools[p.bucket] += p.stake
+  return pools
+}
+
+function realBinaryPoolsFor(positions: BinaryPosition[], wallet: string): BinaryPools {
+  const pools = emptyBinaryPools()
+  for (const p of positions) if (p.wallet === wallet) pools[p.side] += p.stake
+  return pools
+}
+
+function realMagnitudePoolsFor(positions: MagnitudePosition[], wallet: string): MagnitudePools {
+  const pools = emptyMagnitudePools()
+  for (const p of positions) if (p.wallet === wallet) pools[p.band] += p.stake
   return pools
 }
 
@@ -90,6 +124,33 @@ function seedPools(wallet: string): BucketPools {
   return pools
 }
 
+// Salted per dimension (':binary' / ':magnitude') so a wallet's odds don't look
+// identical-shaped across markets — must mirror the same salt in
+// src/sold/market/localMarket.ts so local-preview odds match live mode.
+function seedBinaryPools(wallet: string): BinaryPools {
+  const rng = mulberry32(hashStr(wallet + ':binary'))
+  const weights = BINARY_SIDES.map(() => 0.3 + rng() * rng())
+  const sum = weights.reduce((s, w) => s + w, 0)
+  const liquidity = 1800 + Math.floor(rng() * 4200)
+  const pools = emptyBinaryPools()
+  BINARY_SIDES.forEach((id, i) => {
+    pools[id] = Math.round((weights[i] / sum) * liquidity)
+  })
+  return pools
+}
+
+function seedMagnitudePools(wallet: string): MagnitudePools {
+  const rng = mulberry32(hashStr(wallet + ':magnitude'))
+  const weights = MAGNITUDE_BANDS.map(() => 0.3 + rng() * rng())
+  const sum = weights.reduce((s, w) => s + w, 0)
+  const liquidity = 1800 + Math.floor(rng() * 4200)
+  const pools = emptyMagnitudePools()
+  MAGNITUDE_BANDS.forEach((id, i) => {
+    pools[id] = Math.round((weights[i] / sum) * liquidity)
+  })
+  return pools
+}
+
 export interface OpenHolder {
   wallet: string
   handle: string
@@ -112,6 +173,12 @@ export class BucketMarket extends DurableObject<BucketEnv> {
   private async positions(): Promise<BucketPosition[]> {
     return (await this.ctx.storage.get<BucketPosition[]>('positions')) ?? []
   }
+  private async binaryPositions(): Promise<BinaryPosition[]> {
+    return (await this.ctx.storage.get<BinaryPosition[]>('binaryPositions')) ?? []
+  }
+  private async magnitudePositions(): Promise<MagnitudePosition[]> {
+    return (await this.ctx.storage.get<MagnitudePosition[]>('magnitudePositions')) ?? []
+  }
   private sampleIntervalMs(): number {
     const min = parseFloat(this.env.SOLD_SAMPLE_INTERVAL_MIN ?? String(SAMPLE_INTERVAL_MIN_DEFAULT))
     return Math.max(1, min) * 60_000
@@ -133,26 +200,40 @@ export class BucketMarket extends DurableObject<BucketEnv> {
         balanceAtSnapshot: h.balanceAtSnapshot,
         balanceNow: null,
         pools: seedPools(h.wallet),
+        binaryPools: seedBinaryPools(h.wallet),
+        magnitudePools: seedMagnitudePools(h.wallet),
         bettors: 6 + (hashStr(h.wallet) % 40),
         opensAt,
         closesAt,
         resolvedBucket: undefined,
+        dropRatio: null,
       })),
     }
     await this.ctx.storage.put('market', state)
     await this.ctx.storage.put('positions', [] as BucketPosition[])
+    await this.ctx.storage.put('binaryPositions', [] as BinaryPosition[])
+    await this.ctx.storage.put('magnitudePositions', [] as MagnitudePosition[])
     await this.ctx.storage.setAlarm(Math.min(opensAt + this.sampleIntervalMs(), closesAt))
     return state
   }
 
-  /** Market view with each holder enriched by its real (backed) pool. */
+  /** Market view with each holder enriched by its real (backed) pools + derived cross-dimension outcomes. */
   async getMarket(): Promise<(MarketState & { holders: BucketHolderMarket[] }) | null> {
     const state = await this.state()
     if (!state) return null
     const positions = await this.positions()
+    const binaryPositions = await this.binaryPositions()
+    const magnitudePositions = await this.magnitudePositions()
     return {
       ...state,
-      holders: state.holders.map((h) => ({ ...h, realPools: realPoolsFor(positions, h.wallet) })),
+      holders: state.holders.map((h) => ({
+        ...h,
+        realPools: realPoolsFor(positions, h.wallet),
+        realBinaryPools: realBinaryPoolsFor(binaryPositions, h.wallet),
+        realMagnitudePools: realMagnitudePoolsFor(magnitudePositions, h.wallet),
+        resolvedBinary: h.resolvedBucket == null ? null : h.resolvedBucket === 'holds' ? 'no' : 'yes',
+        resolvedMagnitudeBand: h.resolvedBucket == null || h.dropRatio == null ? null : bandForRatio(h.dropRatio),
+      })),
     }
   }
 
@@ -191,6 +272,70 @@ export class BucketMarket extends DurableObject<BucketEnv> {
     return predictor ? positions.filter((p) => p.predictor === predictor) : positions
   }
 
+  async betBinary(predictor: string, wallet: string, side: BinarySide, stake: number): Promise<{ ok: boolean; error?: string }> {
+    if (!predictor) return { ok: false, error: 'not-connected' }
+    if (!BINARY_SIDES.includes(side)) return { ok: false, error: 'bad-side' }
+    if (!(stake > 0)) return { ok: false, error: 'bad-stake' }
+    const state = await this.state()
+    if (!state || state.status !== 'open') return { ok: false, error: 'market-not-open' }
+    const holder = state.holders.find((h) => h.wallet === wallet)
+    if (!holder) return { ok: false, error: 'unknown-wallet' }
+    if (holder.resolvedBucket != null) return { ok: false, error: 'holder-locked' }
+    if (Date.now() >= state.closesAt) return { ok: false, error: 'window-closed' }
+    if (!holder.binaryPools) holder.binaryPools = seedBinaryPools(wallet)
+
+    const positions = await this.binaryPositions()
+    const prevIdx = positions.findIndex((p) => p.predictor === predictor && p.wallet === wallet)
+    if (prevIdx >= 0) {
+      const prev = positions[prevIdx]
+      holder.binaryPools[prev.side] = Math.max(0, holder.binaryPools[prev.side] - prev.stake)
+      positions.splice(prevIdx, 1)
+    }
+    holder.binaryPools[side] += stake
+    positions.push({ wallet, side, stake, predictor, placedAt: Date.now() })
+
+    await this.ctx.storage.put('market', state)
+    await this.ctx.storage.put('binaryPositions', positions)
+    return { ok: true }
+  }
+
+  async betMagnitude(predictor: string, wallet: string, band: MagnitudeBand, stake: number): Promise<{ ok: boolean; error?: string }> {
+    if (!predictor) return { ok: false, error: 'not-connected' }
+    if (!MAGNITUDE_BANDS.includes(band)) return { ok: false, error: 'bad-band' }
+    if (!(stake > 0)) return { ok: false, error: 'bad-stake' }
+    const state = await this.state()
+    if (!state || state.status !== 'open') return { ok: false, error: 'market-not-open' }
+    const holder = state.holders.find((h) => h.wallet === wallet)
+    if (!holder) return { ok: false, error: 'unknown-wallet' }
+    if (holder.resolvedBucket != null) return { ok: false, error: 'holder-locked' }
+    if (Date.now() >= state.closesAt) return { ok: false, error: 'window-closed' }
+    if (!holder.magnitudePools) holder.magnitudePools = seedMagnitudePools(wallet)
+
+    const positions = await this.magnitudePositions()
+    const prevIdx = positions.findIndex((p) => p.predictor === predictor && p.wallet === wallet)
+    if (prevIdx >= 0) {
+      const prev = positions[prevIdx]
+      holder.magnitudePools[prev.band] = Math.max(0, holder.magnitudePools[prev.band] - prev.stake)
+      positions.splice(prevIdx, 1)
+    }
+    holder.magnitudePools[band] += stake
+    positions.push({ wallet, band, stake, predictor, placedAt: Date.now() })
+
+    await this.ctx.storage.put('market', state)
+    await this.ctx.storage.put('magnitudePositions', positions)
+    return { ok: true }
+  }
+
+  async getBinaryPositions(predictor?: string): Promise<BinaryPosition[]> {
+    const positions = await this.binaryPositions()
+    return predictor ? positions.filter((p) => p.predictor === predictor) : positions
+  }
+
+  async getMagnitudePositions(predictor?: string): Promise<MagnitudePosition[]> {
+    const positions = await this.magnitudePositions()
+    return predictor ? positions.filter((p) => p.predictor === predictor) : positions
+  }
+
   async getLeaderboard(): Promise<PredictorScore[]> {
     return (await this.ctx.storage.get<PredictorScore[]>('scores')) ?? []
   }
@@ -207,6 +352,7 @@ export class BucketMarket extends DurableObject<BucketEnv> {
       if (!bal) continue
       h.balanceNow = bal.balance
       const before = h.balanceAtSnapshot
+      h.dropRatio = before > 0 ? Math.max(0, (before - bal.balance) / before) : 0
       if (before > 0 && (before - bal.balance) / before > threshold) {
         // locks the holder: bet() now rejects, killing the front-run window
         h.resolvedBucket = bucketForElapsed(elapsedHours)
@@ -219,7 +365,30 @@ export class BucketMarket extends DurableObject<BucketEnv> {
     for (const h of state.holders) if (h.resolvedBucket == null) h.resolvedBucket = 'holds'
 
     const positions = await this.positions()
+    const binaryPositions = await this.binaryPositions()
+    const magnitudePositions = await this.magnitudePositions()
     const scoreMap: Record<string, PredictorScore> = {}
+
+    const settleDimension = <T extends { wallet: string; stake: number; predictor: string }>(
+      pos: T[],
+      outcomeOf: (p: T) => boolean,
+      winnerPoolOf: (wallet: string) => number,
+      loserPoolOf: (wallet: string) => number,
+    ) => {
+      for (const p of pos) {
+        const sc = (scoreMap[p.predictor] ??= { predictor: p.predictor, correct: 0, total: 0, pointsDelta: 0 })
+        sc.total++
+        const winnerPool = winnerPoolOf(p.wallet)
+        const loserPool = loserPoolOf(p.wallet)
+        if (outcomeOf(p)) {
+          sc.correct++
+          if (winnerPool > 0) sc.pointsDelta += Math.round((p.stake / winnerPool) * loserPool)
+        } else {
+          sc.pointsDelta -= winnerPool > 0 ? p.stake : 0
+        }
+      }
+    }
+
     for (const h of state.holders) {
       const winning = h.resolvedBucket as BucketId
       const hp = positions.filter((p) => p.wallet === h.wallet)
@@ -239,6 +408,27 @@ export class BucketMarket extends DurableObject<BucketEnv> {
         }
       }
     }
+
+    // binary — resolvedBinary is a pure function of resolvedBucket, no new timing logic needed
+    for (const h of state.holders) {
+      const resolvedBinary: BinarySide = h.resolvedBucket === 'holds' ? 'no' : 'yes'
+      const hp = binaryPositions.filter((p) => p.wallet === h.wallet)
+      const realWinner = hp.filter((p) => p.side === resolvedBinary).reduce((s, p) => s + p.stake, 0)
+      const realTotal = hp.reduce((s, p) => s + p.stake, 0)
+      const realLoser = realTotal - realWinner
+      settleDimension(hp, (p) => p.side === resolvedBinary, () => realWinner, () => realLoser)
+    }
+
+    // magnitude — resolvedMagnitudeBand derived from the same real oracle-read dropRatio
+    for (const h of state.holders) {
+      const resolvedBand = bandForRatio(h.dropRatio ?? 0)
+      const hp = magnitudePositions.filter((p) => p.wallet === h.wallet)
+      const realWinner = hp.filter((p) => p.band === resolvedBand).reduce((s, p) => s + p.stake, 0)
+      const realTotal = hp.reduce((s, p) => s + p.stake, 0)
+      const realLoser = realTotal - realWinner
+      settleDimension(hp, (p) => p.band === resolvedBand, () => realWinner, () => realLoser)
+    }
+
     state.status = 'settled'
     await this.ctx.storage.put('market', state)
     await this.ctx.storage.put('scores', Object.values(scoreMap))

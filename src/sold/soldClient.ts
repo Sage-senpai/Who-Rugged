@@ -1,8 +1,10 @@
 /* HTTP client for the WHO SOLD? Worker routes.
    Env-gated: with no VITE_SOLD_URL configured these are silent no-ops. */
 import type { PredictionWindow, Prediction, PredictorScore, RegisteredHolder, BatchWindow } from './soldTypes'
-import type { HolderMarket, MarketPosition } from './market/marketTypes'
+import type { HolderMarket, MarketPosition, BinaryMarketPosition, MagnitudeMarketPosition } from './market/marketTypes'
 import type { BucketId } from './market/buckets'
+import type { BinarySide } from './market/binary'
+import type { MagnitudeBand } from './market/magnitude'
 
 const RAW = import.meta.env.VITE_SOLD_URL as string | undefined
 export const SOLD_URL = RAW ? RAW.replace(/\/$/, '') : undefined
@@ -79,11 +81,46 @@ export const betBucket = (wallet: string, predictor: string, bucket: BucketId, s
     { ok: false, error: 'not-configured' },
   )
 
+export const betBinary = (wallet: string, predictor: string, side: BinarySide, stake: number) =>
+  post<{ ok: boolean; error?: string }>(
+    '/sold/market/bet-binary',
+    { wallet, predictor, side, stake },
+    { ok: false, error: 'not-configured' },
+  )
+
+export const betMagnitude = (wallet: string, predictor: string, band: MagnitudeBand, stake: number) =>
+  post<{ ok: boolean; error?: string }>(
+    '/sold/market/bet-magnitude',
+    { wallet, predictor, band, stake },
+    { ok: false, error: 'not-configured' },
+  )
+
 export const getMarketPositions = (predictor: string) =>
   get<MarketPosition[]>(`/sold/market/positions?predictor=${encodeURIComponent(predictor)}`, [])
 
+export const getBinaryPositions = (predictor: string) =>
+  get<BinaryMarketPosition[]>(`/sold/market/positions-binary?predictor=${encodeURIComponent(predictor)}`, [])
+
+export const getMagnitudePositions = (predictor: string) =>
+  get<MagnitudeMarketPosition[]>(`/sold/market/positions-magnitude?predictor=${encodeURIComponent(predictor)}`, [])
+
 export const getMarketLeaderboard = () =>
   get<PredictorScore[]>('/sold/market/leaderboard', [])
+
+// ── on-chain activity + price (best-effort real data; never fabricated) ────────
+
+export interface ActivityEvent {
+  signature: string
+  at: number
+  kind: 'buy' | 'sell' | 'unknown'
+  amount: number
+}
+
+export const getActivity = (wallet: string, limit = 10) =>
+  get<ActivityEvent[]>(`/sold/activity?wallet=${encodeURIComponent(wallet)}&limit=${limit}`, [])
+
+export const getTokenPrice = () =>
+  get<{ mint: string; usd: number | null; asOf: number } | null>('/sold/price', null)
 
 // ── registration ───────────────────────────────────────────────────────────────
 

@@ -8,7 +8,11 @@
    and persisted. Nothing here encodes our opinion — seed spread is derived from
    the wallet hash alone, the same way a fresh order book would look. */
 import { BUCKET_IDS, emptyPools, type BucketId, type Pools } from './buckets'
-import type { HolderMarket, MarketPosition, PlaceResult } from './marketTypes'
+import { BINARY_IDS, emptyBinaryPools, type BinarySide, type BinaryPools } from './binary'
+import { MAGNITUDE_IDS, emptyMagnitudePools, type MagnitudeBand, type MagnitudePools } from './magnitude'
+import type {
+  HolderMarket, MarketPosition, BinaryMarketPosition, MagnitudeMarketPosition, PlaceResult,
+} from './marketTypes'
 
 const STORE_KEY = 'who-sold:market:v1'
 const DEFAULT_STAKE = 50
@@ -17,8 +21,12 @@ interface Store {
   windowId: string
   /** Extra liquidity added by real bets, per wallet. */
   contributions: Record<string, Pools>
+  binaryContributions: Record<string, BinaryPools>
+  magnitudeContributions: Record<string, MagnitudePools>
   /** Every position placed this window. */
   positions: MarketPosition[]
+  binaryPositions: BinaryMarketPosition[]
+  magnitudePositions: MagnitudeMarketPosition[]
 }
 
 // ── deterministic PRNG (mulberry32 over a string hash) ──────────────────────
@@ -54,16 +62,57 @@ export function seedPools(wallet: string): Pools {
   return pools
 }
 
+// Salted per dimension (':binary' / ':magnitude') — mirrors the exact same salt in
+// server/src/sold/BucketMarket.ts so local-preview odds match what live mode shows.
+export function seedBinaryPools(wallet: string): BinaryPools {
+  const rng = mulberry32(hashStr(wallet + ':binary'))
+  const weights = BINARY_IDS.map(() => 0.3 + rng() * rng())
+  const sum = weights.reduce((s, w) => s + w, 0)
+  const liquidity = 1800 + Math.floor(rng() * 4200)
+  const pools = emptyBinaryPools()
+  BINARY_IDS.forEach((id, i) => {
+    pools[id] = Math.round((weights[i] / sum) * liquidity)
+  })
+  return pools
+}
+
+export function seedMagnitudePools(wallet: string): MagnitudePools {
+  const rng = mulberry32(hashStr(wallet + ':magnitude'))
+  const weights = MAGNITUDE_IDS.map(() => 0.3 + rng() * rng())
+  const sum = weights.reduce((s, w) => s + w, 0)
+  const liquidity = 1800 + Math.floor(rng() * 4200)
+  const pools = emptyMagnitudePools()
+  MAGNITUDE_IDS.forEach((id, i) => {
+    pools[id] = Math.round((weights[i] / sum) * liquidity)
+  })
+  return pools
+}
+
 // ── persistence ─────────────────────────────────────────────────────────────
 function readStore(windowId: string): Store {
   try {
     const raw = localStorage.getItem(STORE_KEY)
     if (raw) {
-      const s = JSON.parse(raw) as Store
-      if (s.windowId === windowId) return s
+      const s = JSON.parse(raw) as Partial<Store>
+      if (s.windowId === windowId) {
+        // back-fill fields absent from localStorage written before binary/magnitude existed
+        return {
+          windowId,
+          contributions: s.contributions ?? {},
+          positions: s.positions ?? [],
+          binaryContributions: s.binaryContributions ?? {},
+          magnitudeContributions: s.magnitudeContributions ?? {},
+          binaryPositions: s.binaryPositions ?? [],
+          magnitudePositions: s.magnitudePositions ?? [],
+        }
+      }
     }
   } catch { /* fall through to fresh */ }
-  return { windowId, contributions: {}, positions: [] }
+  return {
+    windowId, contributions: {}, positions: [],
+    binaryContributions: {}, magnitudeContributions: {},
+    binaryPositions: [], magnitudePositions: [],
+  }
 }
 function writeStore(s: Store): void {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(s)) } catch { /* non-fatal */ }
@@ -89,6 +138,17 @@ export function buildMarket(
   const mine = store.contributions[holder.wallet] ?? emptyPools()
   const pools = emptyPools()
   for (const id of BUCKET_IDS) pools[id] = seed[id] + mine[id]
+
+  const binarySeed = seedBinaryPools(holder.wallet)
+  const myBinary = store.binaryContributions[holder.wallet] ?? emptyBinaryPools()
+  const binaryPools = emptyBinaryPools()
+  for (const id of BINARY_IDS) binaryPools[id] = binarySeed[id] + myBinary[id]
+
+  const magnitudeSeed = seedMagnitudePools(holder.wallet)
+  const myMagnitude = store.magnitudeContributions[holder.wallet] ?? emptyMagnitudePools()
+  const magnitudePools = emptyMagnitudePools()
+  for (const id of MAGNITUDE_IDS) magnitudePools[id] = magnitudeSeed[id] + myMagnitude[id]
+
   const bettors = store.positions.filter((p) => p.wallet === holder.wallet).length
   return {
     wallet: holder.wallet,
@@ -98,6 +158,10 @@ export function buildMarket(
     balanceNow: holder.balanceNow,
     pools,
     realPools: { ...mine },
+    binaryPools,
+    realBinaryPools: { ...myBinary },
+    magnitudePools,
+    realMagnitudePools: { ...myMagnitude },
     // seed a believable crowd size alongside real bettors
     bettors: bettors + 6 + (hashStr(holder.wallet) % 40),
     opensAt,
@@ -138,6 +202,56 @@ export function myPositionFor(
 ): MarketPosition | undefined {
   if (!predictor) return undefined
   return readStore(windowId).positions.find((p) => p.predictor === predictor && p.wallet === wallet)
+}
+
+export function placeBinaryBet(
+  windowId: string,
+  wallet: string,
+  side: BinarySide,
+  stake: number,
+  predictor: string,
+): PlaceResult {
+  if (!predictor) return { ok: false, error: 'not-connected' }
+  if (stake <= 0) return { ok: false, error: 'bad-stake' }
+  const store = readStore(windowId)
+  const contrib = (store.binaryContributions[wallet] ??= emptyBinaryPools())
+  const prev = store.binaryPositions.find((p) => p.wallet === wallet && p.predictor === predictor)
+  if (prev) contrib[prev.side] = Math.max(0, contrib[prev.side] - prev.stake)
+  contrib[side] += stake
+  store.binaryPositions = store.binaryPositions.filter((p) => !(p.wallet === wallet && p.predictor === predictor))
+  store.binaryPositions.push({ wallet, side, stake, predictor, placedAt: Date.now() })
+  writeStore(store)
+  return { ok: true }
+}
+
+export function placeMagnitudeBet(
+  windowId: string,
+  wallet: string,
+  band: MagnitudeBand,
+  stake: number,
+  predictor: string,
+): PlaceResult {
+  if (!predictor) return { ok: false, error: 'not-connected' }
+  if (stake <= 0) return { ok: false, error: 'bad-stake' }
+  const store = readStore(windowId)
+  const contrib = (store.magnitudeContributions[wallet] ??= emptyMagnitudePools())
+  const prev = store.magnitudePositions.find((p) => p.wallet === wallet && p.predictor === predictor)
+  if (prev) contrib[prev.band] = Math.max(0, contrib[prev.band] - prev.stake)
+  contrib[band] += stake
+  store.magnitudePositions = store.magnitudePositions.filter((p) => !(p.wallet === wallet && p.predictor === predictor))
+  store.magnitudePositions.push({ wallet, band, stake, predictor, placedAt: Date.now() })
+  writeStore(store)
+  return { ok: true }
+}
+
+export function myBinaryPositions(windowId: string, predictor: string | null): BinaryMarketPosition[] {
+  if (!predictor) return []
+  return readStore(windowId).binaryPositions.filter((p) => p.predictor === predictor)
+}
+
+export function myMagnitudePositions(windowId: string, predictor: string | null): MagnitudeMarketPosition[] {
+  if (!predictor) return []
+  return readStore(windowId).magnitudePositions.filter((p) => p.predictor === predictor)
 }
 
 export { DEFAULT_STAKE }

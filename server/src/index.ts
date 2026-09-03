@@ -12,7 +12,7 @@ import { DurableObject } from 'cloudflare:workers'
 import { SolanaOracle } from './sold/SolanaOracle'
 import { TRACKED_WALLETS, lookupHolder } from './sold/holderRegistry'
 import { BucketMarket, type OpenHolder } from './sold/BucketMarket'
-import type { TrackedHolder, PredictionWindow, Prediction, Resolution, PredictorScore, RegisteredHolder, BatchWindow, BatchResult, BatchPrediction, BucketId } from './sold/types'
+import type { TrackedHolder, PredictionWindow, Prediction, Resolution, PredictorScore, RegisteredHolder, BatchWindow, BatchResult, BatchPrediction, BucketId, BinarySide, MagnitudeBand } from './sold/types'
 
 const ANSEM_MINT_DEFAULT = '9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump'
 
@@ -731,9 +731,56 @@ export default {
         return json(await market.bet(b.predictor, b.wallet, b.bucket as BucketId, b.stake ?? 50))
       }
 
+      if (url.pathname === '/sold/market/bet-binary' && request.method === 'POST') {
+        let b: { predictor?: string; wallet?: string; side?: string; stake?: number }
+        try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+        if (!b.predictor || !b.wallet || !b.side) return json({ error: 'missing-fields' }, 400)
+        const market = env.BUCKET_MARKET.getByName(wid)
+        return json(await market.betBinary(b.predictor, b.wallet, b.side as BinarySide, b.stake ?? 50))
+      }
+
+      if (url.pathname === '/sold/market/bet-magnitude' && request.method === 'POST') {
+        let b: { predictor?: string; wallet?: string; band?: string; stake?: number }
+        try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+        if (!b.predictor || !b.wallet || !b.band) return json({ error: 'missing-fields' }, 400)
+        const market = env.BUCKET_MARKET.getByName(wid)
+        return json(await market.betMagnitude(b.predictor, b.wallet, b.band as MagnitudeBand, b.stake ?? 50))
+      }
+
       if (url.pathname === '/sold/market/positions' && request.method === 'GET') {
         const market = env.BUCKET_MARKET.getByName(wid)
         return json(await market.getPositions(url.searchParams.get('predictor') ?? undefined))
+      }
+
+      if (url.pathname === '/sold/market/positions-binary' && request.method === 'GET') {
+        const market = env.BUCKET_MARKET.getByName(wid)
+        return json(await market.getBinaryPositions(url.searchParams.get('predictor') ?? undefined))
+      }
+
+      if (url.pathname === '/sold/market/positions-magnitude' && request.method === 'GET') {
+        const market = env.BUCKET_MARKET.getByName(wid)
+        return json(await market.getMagnitudePositions(url.searchParams.get('predictor') ?? undefined))
+      }
+
+      if (url.pathname === '/sold/activity' && request.method === 'GET') {
+        const wallet = url.searchParams.get('wallet') ?? ''
+        if (wallet.length < 32 || wallet.length > 44) return json({ error: 'invalid-wallet' }, 400)
+        const limit = parseInt(url.searchParams.get('limit') ?? '10')
+        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
+        return json(await oracle.fetchRecentActivity(wallet, limit))
+      }
+
+      if (url.pathname === '/sold/price' && request.method === 'GET') {
+        const mint = env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT
+        try {
+          const res = await fetch(`https://api.jup.ag/price/v2?ids=${mint}`)
+          if (!res.ok) return json({ mint, usd: null, asOf: Date.now() })
+          const data = (await res.json()) as { data?: Record<string, { price?: string }> }
+          const price = data.data?.[mint]?.price
+          return json({ mint, usd: price ? parseFloat(price) : null, asOf: Date.now() })
+        } catch {
+          return json({ mint, usd: null, asOf: Date.now() })
+        }
       }
 
       if (url.pathname === '/sold/market/leaderboard' && request.method === 'GET') {
