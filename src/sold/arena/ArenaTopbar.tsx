@@ -15,7 +15,7 @@ export function ArenaTopbar({ inPlay }: Props) {
 
   return (
     <header className="arena-topbar">
-      <Link to="/arena" className="arena-brand">
+      <Link to="/" className="arena-brand">
         <span className="arena-brand-mark">🪓</span>
         <span>
           <div className="arena-brand-name">WHO RUGGED?</div>
@@ -24,7 +24,7 @@ export function ArenaTopbar({ inPlay }: Props) {
       </Link>
 
       <nav className="arena-nav">
-        <Link to="/arena" className={pathname.startsWith('/arena') ? 'active' : ''}>ARENAS</Link>
+        <Link to="/" className={pathname === '/' || pathname.startsWith('/arena') ? 'active' : ''}>ARENAS</Link>
         <span title="Coming soon">PORTFOLIO</span>
         <span title="Coming soon">LEADERBOARD</span>
         <span title="Coming soon">HISTORY</span>

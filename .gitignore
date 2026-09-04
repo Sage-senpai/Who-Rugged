@@ -56,3 +56,5 @@ coverage/
 # cloudflare wrangler (server/)
 .wrangler/
 .dev.vars
+
+.vercel

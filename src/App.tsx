@@ -42,7 +42,8 @@ export default function App() {
         <PresenceBeacon />
         <Suspense fallback={<RouteFallback />}>
           <Routes>
-            <Route path="/" element={<PathChooser />} />
+            <Route path="/" element={<ArenaHome />} />
+            <Route path="/choose" element={<PathChooser />} />
             <Route path="/who-rugged" element={<Landing />} />
             <Route path="/menu" element={<Menu />} />
             <Route path="/how" element={<HowToPlay />} />
