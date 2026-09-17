@@ -718,12 +718,11 @@ export default {
       const arenaMint = arenaId === 'ansem' ? (env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT) : ARENA_MINTS[arenaId]
       // Bucket-market id is namespaced per arena so each token gets its own
       // window; ANSEM keeps its original (unnamespaced) id unchanged.
-      // v2: a bad first deploy left bonk/wif stuck as empty+settled (ensureOpen
-      // is idempotent, so an empty holders array from a transient RPC failure
-      // locked in permanently). Bumping forces fresh Durable Objects; drop
-      // once the next natural window rollover (2026-09-18T00:00 UTC) makes it
-      // moot.
-      const marketWid = arenaId === 'ansem' ? wid : `${arenaId}:v2:${windowId(hours)}`
+      // v3: v2's bad run (before ALCHEMY_API_KEY was fixed) also left bonk/wif
+      // stuck as empty+settled. Bumping again forces fresh Durable Objects now
+      // that the key actually works; drop this versioning once the next
+      // natural window rollover (2026-09-18T00:00 UTC) makes it moot.
+      const marketWid = arenaId === 'ansem' ? wid : `${arenaId}:v3:${windowId(hours)}`
 
       // curated + community-registered holders with current balances
       const buildHolders = async (): Promise<OpenHolder[]> => {

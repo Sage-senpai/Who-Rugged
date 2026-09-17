@@ -20,19 +20,13 @@ export const ARENAS: ArenaDef[] = [
     totalSupply: 1_000_000_000,
     status: 'live',
   },
-  // BONK and WIF are wired end-to-end (see server/src/index.ts ARENA_MINTS,
-  // SolanaOracle.fetchTopHoldersByMint) but held at 'locked' until the
-  // ALCHEMY_API_KEY secret is fixed — it's currently rejected with 401 on
-  // every RPC method, so there is no top-holder data to show. Flip to 'live'
-  // once a fresh key is confirmed working (test: does /sold/markets?arena=bonk
-  // return holders?).
   {
     id: 'bonk',
     name: 'Bonk',
     ticker: '$BONK',
     mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
     totalSupply: 87_995_282_867_000,
-    status: 'locked',
+    status: 'live',
   },
   {
     id: 'wif',
@@ -40,7 +34,7 @@ export const ARENAS: ArenaDef[] = [
     ticker: '$WIF',
     mint: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
     totalSupply: 998_840_593,
-    status: 'locked',
+    status: 'live',
   },
   { id: 'doge', name: 'Dogecoin', ticker: '$DOGE', mint: null, totalSupply: null, status: 'locked' },
   { id: 'pepe', name: 'Pepe Coin', ticker: '$PEPE', mint: null, totalSupply: null, status: 'locked' },
