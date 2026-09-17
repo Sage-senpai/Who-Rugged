@@ -273,6 +273,12 @@
 
 .arena-row-me { background: var(--ar-accent-dim); }
 
+.arena-sound-toggle {
+  background: none; border: 1px solid var(--ar-border); border-radius: var(--ar-radius-sm);
+  color: var(--ar-text-dim); font-size: 14px; padding: 6px 10px; line-height: 1;
+}
+.arena-sound-toggle:hover { color: var(--ar-accent); border-color: var(--ar-accent); }
+
 @media (max-width: 760px) {
   .arena-detail-grid, .arena-mtype-grid, .arena-stat-grid { grid-template-columns: 1fr; }
   .arena-topbar { flex-wrap: wrap; }

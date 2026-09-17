@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { WalletMenu } from '../../wallet/WalletMenu'
 import { useSolana } from '../../wallet/SolanaContext'
+import { useSettings } from '../../settings/SettingsContext'
 import { BET_TOKEN } from '../soldConfig'
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 export function ArenaTopbar({ inPlay }: Props) {
   const { pathname } = useLocation()
   const { address } = useSolana()
+  const { settings, toggle } = useSettings()
 
   return (
     <header className="arena-topbar">
@@ -36,6 +38,14 @@ export function ArenaTopbar({ inPlay }: Props) {
             IN PLAY <b>{inPlay.toLocaleString()} {BET_TOKEN}</b>
           </span>
         )}
+        <button
+          className="arena-sound-toggle"
+          onClick={() => toggle('music')}
+          title={settings.music ? 'Mute music' : 'Unmute music'}
+          aria-label={settings.music ? 'Mute music' : 'Unmute music'}
+        >
+          {settings.music ? '♪' : '♪̶'}
+        </button>
         <WalletMenu />
       </div>
     </header>

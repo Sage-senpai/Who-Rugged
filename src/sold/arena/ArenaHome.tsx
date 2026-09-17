@@ -1,9 +1,13 @@
-/* Scene 1 — Enter Arena. Exactly one arena is real; others render locked,
-   never with fabricated live numbers (see arenas.ts). */
+/* Scene 1 — Enter Arena. Three arenas are real (see arenas.ts); others render
+   locked, never with fabricated live numbers. Each live arena needs its own
+   useMarkets() call — one shared call would leak ANSEM's numbers onto the
+   BONK/WIF tiles. The count is fixed and small, so three explicit calls
+   (rules of hooks forbid calling a hook in a loop) beats a generic system
+   for what's currently a three-item list. */
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSolana } from '../../wallet/SolanaContext'
-import { useMarkets } from '../market/useMarkets'
+import { useMarkets, type UseMarketsReturn } from '../market/useMarkets'
 import { poolTotal } from '../market/buckets'
 import { binaryPoolTotal } from '../market/binary'
 import { magnitudePoolTotal } from '../market/magnitude'
@@ -19,24 +23,32 @@ function fmt(n: number): string {
   return n.toLocaleString()
 }
 
+function tvlOf(markets: UseMarketsReturn): number {
+  return markets.markets.reduce((sum, m) => {
+    const time = poolTotal(m.realPools ?? m.pools)
+    const bin = binaryPoolTotal(m.realBinaryPools ?? m.binaryPools ?? { yes: 0, no: 0 })
+    const mag = magnitudePoolTotal(m.realMagnitudePools ?? m.magnitudePools ?? { b0_10: 0, b10_25: 0, b25_50: 0, b50_75: 0, b75_100: 0 })
+    return sum + time + bin + mag
+  }, 0)
+}
+
+function inPlayOf(markets: UseMarketsReturn): number {
+  const all = [...markets.positions, ...markets.binaryPositions, ...markets.magnitudePositions]
+  return all.reduce((s, p) => s + p.stake, 0)
+}
+
 export function ArenaHome() {
   const navigate = useNavigate()
   const { address } = useSolana()
-  const markets = useMarkets(address)
+  const ansem = useMarkets(address, 'ansem')
+  const bonk = useMarkets(address, 'bonk')
+  const wif = useMarkets(address, 'wif')
+  const byArena: Record<string, UseMarketsReturn> = { ansem, bonk, wif }
 
-  const tvl = useMemo(() => {
-    return markets.markets.reduce((sum, m) => {
-      const time = poolTotal(m.realPools ?? m.pools)
-      const bin = binaryPoolTotal(m.realBinaryPools ?? m.binaryPools ?? { yes: 0, no: 0 })
-      const mag = magnitudePoolTotal(m.realMagnitudePools ?? m.magnitudePools ?? { b0_10: 0, b10_25: 0, b25_50: 0, b50_75: 0, b75_100: 0 })
-      return sum + time + bin + mag
-    }, 0)
-  }, [markets.markets])
-
-  const myInPlay = useMemo(() => {
-    const all = [...markets.positions, ...markets.binaryPositions, ...markets.magnitudePositions]
-    return all.reduce((s, p) => s + p.stake, 0)
-  }, [markets.positions, markets.binaryPositions, markets.magnitudePositions])
+  const myInPlay = useMemo(
+    () => inPlayOf(ansem) + inPlayOf(bonk) + inPlayOf(wif),
+    [ansem, bonk, wif],
+  )
 
   return (
     <div className="arena-shell">
@@ -53,7 +65,9 @@ export function ArenaHome() {
         <div className="arena-grid">
           {ARENAS.map((arena) => {
             const isLive = arena.status === 'live'
-            const holderCount = isLive ? markets.markets.length : null
+            const markets = byArena[arena.id]
+            const holderCount = isLive && markets ? markets.markets.length : null
+            const tvl = isLive && markets ? tvlOf(markets) : 0
             return (
               <div key={arena.id} className={`arena-tile${isLive ? '' : ' arena-tile-locked'}`}>
                 <div className="arena-tile-head">
@@ -79,7 +93,7 @@ export function ArenaHome() {
                     <div className="arena-tile-stat-val">{arena.totalSupply ? fmt(arena.totalSupply) : '—'}</div>
                   </div>
                   <div style={{ gridColumn: '1 / -1' }}>
-                    <div className="arena-tile-stat-lab">ARENA TVL ({markets.live ? 'SHARED' : 'LOCAL PREVIEW'})</div>
+                    <div className="arena-tile-stat-lab">ARENA TVL ({markets?.live ? 'SHARED' : 'LOCAL PREVIEW'})</div>
                     <div className="arena-tile-stat-val">{isLive ? `${fmt(tvl)} ${BET_TOKEN}` : '—'}</div>
                   </div>
                 </div>

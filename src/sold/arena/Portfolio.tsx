@@ -1,14 +1,19 @@
 /* Portfolio — every position the connected wallet has open or settled, across
-   all three market dimensions. This is the payoff view the "locked" scene
-   points to: place a bet, then come here to watch it resolve for real. Status
-   and payout are derived client-side from the same real pools the server
-   settles from, so a resolved row shows the same number the server paid out. */
+   all three market dimensions AND all three live arenas. This is the payoff
+   view the "locked" scene points to: place a bet, then come here to watch it
+   resolve for real. Status and payout are derived client-side from the same
+   real pools the server settles from, so a resolved row shows the same
+   number the server paid out.
+
+   Three explicit useMarkets() calls (not a loop) because hooks can't be
+   called conditionally/dynamically — fine for a fixed, small arena list. */
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useSolana } from '../../wallet/SolanaContext'
-import { useMarkets } from '../market/useMarkets'
+import { useMarkets, type UseMarketsReturn } from '../market/useMarkets'
 import { arenaAvatarFor } from '../../lib/arenaAvatar'
 import { ArenaTopbar } from './ArenaTopbar'
+import { arenaById } from './arenas'
 import { bucketById, potentialPayout } from '../market/buckets'
 import { binaryById, potentialBinaryPayout } from '../market/binary'
 import { magnitudeById, potentialMagnitudePayout } from '../market/magnitude'
@@ -22,6 +27,7 @@ function shortAddr(w: string): string {
 type Status = 'pending' | 'won' | 'lost'
 interface Row {
   key: string
+  arenaTicker: string
   wallet: string
   handle: string
   avatarSeed: string
@@ -33,61 +39,72 @@ interface Row {
   placedAt: number
 }
 
+function rowsFor(arenaId: string, markets: UseMarketsReturn): Row[] {
+  const ticker = arenaById(arenaId)?.ticker ?? arenaId
+  const holderOf = (wallet: string) => markets.markets.find((m) => m.wallet === wallet)
+  const out: Row[] = []
+
+  for (const p of markets.positions) {
+    const h = holderOf(p.wallet)
+    const resolved = h?.resolvedBucket != null
+    const won = resolved && h!.resolvedBucket === p.bucket
+    const pools = h?.realPools ?? h?.pools
+    out.push({
+      key: `${arenaId}-bucket-${p.wallet}-${p.placedAt}`, arenaTicker: ticker,
+      wallet: p.wallet, handle: h?.handle ?? shortAddr(p.wallet), avatarSeed: h?.avatarSeed ?? p.wallet,
+      kind: 'Time', outcomeLabel: bucketById(p.bucket).short, stake: p.stake,
+      status: !resolved ? 'pending' : won ? 'won' : 'lost',
+      payout: !resolved ? (pools ? potentialPayout(pools, p.bucket, p.stake) : p.stake)
+        : won ? potentialPayout(h!.realPools ?? h!.pools, p.bucket, p.stake) : 0,
+      placedAt: p.placedAt,
+    })
+  }
+  for (const p of markets.binaryPositions) {
+    const h = holderOf(p.wallet)
+    const resolved = h?.resolvedBinary != null
+    const won = resolved && h!.resolvedBinary === p.side
+    const pools = h?.realBinaryPools ?? h?.binaryPools
+    out.push({
+      key: `${arenaId}-binary-${p.wallet}-${p.placedAt}`, arenaTicker: ticker,
+      wallet: p.wallet, handle: h?.handle ?? shortAddr(p.wallet), avatarSeed: h?.avatarSeed ?? p.wallet,
+      kind: 'Binary', outcomeLabel: binaryById(p.side).short, stake: p.stake,
+      status: !resolved ? 'pending' : won ? 'won' : 'lost',
+      payout: !resolved ? (pools ? potentialBinaryPayout(pools, p.side, p.stake) : p.stake)
+        : won ? potentialBinaryPayout(h!.realBinaryPools ?? h!.binaryPools!, p.side, p.stake) : 0,
+      placedAt: p.placedAt,
+    })
+  }
+  for (const p of markets.magnitudePositions) {
+    const h = holderOf(p.wallet)
+    const resolved = h?.resolvedMagnitudeBand != null
+    const won = resolved && h!.resolvedMagnitudeBand === p.band
+    const pools = h?.realMagnitudePools ?? h?.magnitudePools
+    out.push({
+      key: `${arenaId}-magnitude-${p.wallet}-${p.placedAt}`, arenaTicker: ticker,
+      wallet: p.wallet, handle: h?.handle ?? shortAddr(p.wallet), avatarSeed: h?.avatarSeed ?? p.wallet,
+      kind: 'Rug %', outcomeLabel: magnitudeById(p.band).short, stake: p.stake,
+      status: !resolved ? 'pending' : won ? 'won' : 'lost',
+      payout: !resolved ? (pools ? potentialMagnitudePayout(pools, p.band, p.stake) : p.stake)
+        : won ? potentialMagnitudePayout(h!.realMagnitudePools ?? h!.magnitudePools!, p.band, p.stake) : 0,
+      placedAt: p.placedAt,
+    })
+  }
+  return out
+}
+
 export function Portfolio() {
   const { address } = useSolana()
-  const markets = useMarkets(address)
+  const ansem = useMarkets(address, 'ansem')
+  const bonk = useMarkets(address, 'bonk')
+  const wif = useMarkets(address, 'wif')
+  const anyLoading = ansem.loading || bonk.loading || wif.loading
+  const anyLive = ansem.live || bonk.live || wif.live
 
-  const rows = useMemo<Row[]>(() => {
-    const holderOf = (wallet: string) => markets.markets.find((m) => m.wallet === wallet)
-    const out: Row[] = []
-
-    for (const p of markets.positions) {
-      const h = holderOf(p.wallet)
-      const resolved = h?.resolvedBucket != null
-      const won = resolved && h!.resolvedBucket === p.bucket
-      const pools = h?.realPools ?? h?.pools
-      out.push({
-        key: `bucket-${p.wallet}-${p.placedAt}`,
-        wallet: p.wallet, handle: h?.handle ?? shortAddr(p.wallet), avatarSeed: h?.avatarSeed ?? p.wallet,
-        kind: 'Time', outcomeLabel: bucketById(p.bucket).short, stake: p.stake,
-        status: !resolved ? 'pending' : won ? 'won' : 'lost',
-        payout: !resolved ? (pools ? potentialPayout(pools, p.bucket, p.stake) : p.stake)
-          : won ? potentialPayout(h!.realPools ?? h!.pools, p.bucket, p.stake) : 0,
-        placedAt: p.placedAt,
-      })
-    }
-    for (const p of markets.binaryPositions) {
-      const h = holderOf(p.wallet)
-      const resolved = h?.resolvedBinary != null
-      const won = resolved && h!.resolvedBinary === p.side
-      const pools = h?.realBinaryPools ?? h?.binaryPools
-      out.push({
-        key: `binary-${p.wallet}-${p.placedAt}`,
-        wallet: p.wallet, handle: h?.handle ?? shortAddr(p.wallet), avatarSeed: h?.avatarSeed ?? p.wallet,
-        kind: 'Binary', outcomeLabel: binaryById(p.side).short, stake: p.stake,
-        status: !resolved ? 'pending' : won ? 'won' : 'lost',
-        payout: !resolved ? (pools ? potentialBinaryPayout(pools, p.side, p.stake) : p.stake)
-          : won ? potentialBinaryPayout(h!.realBinaryPools ?? h!.binaryPools!, p.side, p.stake) : 0,
-        placedAt: p.placedAt,
-      })
-    }
-    for (const p of markets.magnitudePositions) {
-      const h = holderOf(p.wallet)
-      const resolved = h?.resolvedMagnitudeBand != null
-      const won = resolved && h!.resolvedMagnitudeBand === p.band
-      const pools = h?.realMagnitudePools ?? h?.magnitudePools
-      out.push({
-        key: `magnitude-${p.wallet}-${p.placedAt}`,
-        wallet: p.wallet, handle: h?.handle ?? shortAddr(p.wallet), avatarSeed: h?.avatarSeed ?? p.wallet,
-        kind: 'Rug %', outcomeLabel: magnitudeById(p.band).short, stake: p.stake,
-        status: !resolved ? 'pending' : won ? 'won' : 'lost',
-        payout: !resolved ? (pools ? potentialMagnitudePayout(pools, p.band, p.stake) : p.stake)
-          : won ? potentialMagnitudePayout(h!.realMagnitudePools ?? h!.magnitudePools!, p.band, p.stake) : 0,
-        placedAt: p.placedAt,
-      })
-    }
-    return out.sort((a, b) => b.placedAt - a.placedAt)
-  }, [markets.markets, markets.positions, markets.binaryPositions, markets.magnitudePositions])
+  const rows = useMemo<Row[]>(
+    () => [...rowsFor('ansem', ansem), ...rowsFor('bonk', bonk), ...rowsFor('wif', wif)]
+      .sort((a, b) => b.placedAt - a.placedAt),
+    [ansem, bonk, wif],
+  )
 
   const pending = rows.filter((r) => r.status === 'pending')
   const settled = rows.filter((r) => r.status !== 'pending')
@@ -105,7 +122,7 @@ export function Portfolio() {
           <p className="arena-locked-note">
             Connect a Solana wallet to see your positions. <Link to="/arena">← Back to Arena</Link>
           </p>
-        ) : markets.loading ? (
+        ) : anyLoading ? (
           <p className="arena-loading">Loading your positions…</p>
         ) : rows.length === 0 ? (
           <p className="arena-locked-note">
@@ -130,6 +147,7 @@ export function Portfolio() {
               <table className="arena-table">
                 <thead>
                   <tr>
+                    <th>ARENA</th>
                     <th>HOLDER</th>
                     <th>MARKET</th>
                     <th>YOUR CALL</th>
@@ -141,6 +159,7 @@ export function Portfolio() {
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.key}>
+                      <td><span className="arena-tag">{r.arenaTicker}</span></td>
                       <td>
                         <div className="arena-holder-cell">
                           <img className="arena-avatar" src={arenaAvatarFor(r.avatarSeed)} alt="" loading="lazy" />
@@ -159,7 +178,7 @@ export function Portfolio() {
                 </tbody>
               </table>
               <div className="arena-table-foot">
-                {markets.live ? 'Live server pools' : 'Local preview'} · resolves automatically once the oracle confirms a holder's action
+                {anyLive ? 'Live server pools' : 'Local preview'} · resolves automatically once the oracle confirms a holder's action
               </div>
             </div>
           </>

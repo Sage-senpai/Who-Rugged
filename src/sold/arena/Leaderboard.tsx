@@ -1,6 +1,7 @@
 /* Leaderboard — ranks every predictor who has settled at least one position,
-   by points won. Reads the server's own scoreMap (getMarketLeaderboard), the
-   same numbers used to settle payouts, so there's nothing to compute here. */
+   by points won, summed across all three live arenas. Reads the server's
+   own scoreMap per arena (getMarketLeaderboard), the same numbers used to
+   settle payouts, then merges — nothing computed here beyond addition. */
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSolana } from '../../wallet/SolanaContext'
@@ -13,13 +14,30 @@ function shortAddr(w: string): string {
   return `${w.slice(0, 4)}...${w.slice(-4)}`
 }
 
+function merge(perArena: PredictorScore[][]): PredictorScore[] {
+  const byPredictor: Record<string, PredictorScore> = {}
+  for (const scores of perArena) {
+    for (const s of scores) {
+      const acc = (byPredictor[s.predictor] ??= { predictor: s.predictor, correct: 0, total: 0, pointsDelta: 0 })
+      acc.correct += s.correct
+      acc.total += s.total
+      acc.pointsDelta += s.pointsDelta
+    }
+  }
+  return Object.values(byPredictor)
+}
+
 export function Leaderboard() {
   const { address } = useSolana()
   const [rows, setRows] = useState<PredictorScore[] | null>(null)
 
   useEffect(() => {
     let active = true
-    void getMarketLeaderboard().then((r) => { if (active) setRows(r) })
+    void Promise.all([
+      getMarketLeaderboard('ansem'),
+      getMarketLeaderboard('bonk'),
+      getMarketLeaderboard('wif'),
+    ]).then((results) => { if (active) setRows(merge(results)) })
     return () => { active = false }
   }, [])
 
@@ -31,7 +49,7 @@ export function Leaderboard() {
       <div className="arena-wrap arena-page">
         <p className="arena-eyebrow">Leaderboard</p>
         <h1 className="arena-h1">Top predictors</h1>
-        <p className="arena-sub">Ranked by real points won, across every settled position.</p>
+        <p className="arena-sub">Ranked by real points won, across every settled position in every arena.</p>
 
         {ranked == null ? (
           <p className="arena-loading">Loading leaderboard…</p>

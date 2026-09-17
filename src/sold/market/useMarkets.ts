@@ -40,7 +40,7 @@ export interface UseMarketsReturn {
   defaultStake: number
 }
 
-export function useMarkets(predictor: string | null): UseMarketsReturn {
+export function useMarkets(predictor: string | null, arenaId = 'ansem'): UseMarketsReturn {
   const [win, setWin] = useState(currentWindow)
   const [markets, setMarkets] = useState<HolderMarket[]>([])
   const [positions, setPositions] = useState<MarketPosition[]>([])
@@ -50,25 +50,36 @@ export function useMarkets(predictor: string | null): UseMarketsReturn {
   const [live, setLive] = useState(false)
   const liveRef = useRef(false)
 
+  // The local parimutuel fallback only has fixture data for the original
+  // ANSEM arena — for any other arena, faking that same fixture under a
+  // different token's name would be actively misleading, so a failed fetch
+  // there just shows empty rather than fabricating holders.
   const loadLocal = useCallback(() => {
+    if (arenaId !== 'ansem') {
+      setMarkets([])
+      setPositions([])
+      setBinaryPositions([])
+      setMagnitudePositions([])
+      return
+    }
     const w = currentWindow()
     setWin(w)
     setMarkets(FALLBACK_HOLDERS.map((h) => buildMarket(h, w.windowId, w.opensAt, w.closesAt)))
     setPositions(myPositions(w.windowId, predictor))
     setBinaryPositions(myBinaryPositions(w.windowId, predictor))
     setMagnitudePositions(myMagnitudePositions(w.windowId, predictor))
-  }, [predictor])
+  }, [predictor, arenaId])
 
   const loadServer = useCallback(async (): Promise<boolean> => {
-    const m = await getMarkets()
+    const m = await getMarkets(arenaId)
     if (!m || !m.holders?.length) return false
     setWin({ windowId: m.windowId, opensAt: m.opensAt, closesAt: m.closesAt })
     setMarkets(m.holders)
-    setPositions(predictor ? await getMarketPositions(predictor) : [])
-    setBinaryPositions(predictor ? await getBinaryPositions(predictor) : [])
-    setMagnitudePositions(predictor ? await getMagnitudePositions(predictor) : [])
+    setPositions(predictor ? await getMarketPositions(predictor, arenaId) : [])
+    setBinaryPositions(predictor ? await getBinaryPositions(predictor, arenaId) : [])
+    setMagnitudePositions(predictor ? await getMagnitudePositions(predictor, arenaId) : [])
     return true
-  }, [predictor])
+  }, [predictor, arenaId])
 
   const refresh = useCallback(async () => {
     const ok = await loadServer()
@@ -91,7 +102,7 @@ export function useMarkets(predictor: string | null): UseMarketsReturn {
     async (wallet: string, bucket: BucketId, stake: number = DEFAULT_STAKE): Promise<PlaceResult> => {
       if (!predictor) return { ok: false, error: 'not-connected' }
       if (liveRef.current) {
-        const res = await betBucket(wallet, predictor, bucket, stake)
+        const res = await betBucket(wallet, predictor, bucket, stake, arenaId)
         if (res.ok) await refresh()
         return res
       }
@@ -99,14 +110,14 @@ export function useMarkets(predictor: string | null): UseMarketsReturn {
       if (res.ok) loadLocal()
       return res
     },
-    [predictor, win.windowId, refresh, loadLocal],
+    [predictor, arenaId, win.windowId, refresh, loadLocal],
   )
 
   const placeBinary = useCallback(
     async (wallet: string, side: BinarySide, stake: number = DEFAULT_STAKE): Promise<PlaceResult> => {
       if (!predictor) return { ok: false, error: 'not-connected' }
       if (liveRef.current) {
-        const res = await betBinary(wallet, predictor, side, stake)
+        const res = await betBinary(wallet, predictor, side, stake, arenaId)
         if (res.ok) await refresh()
         return res
       }
@@ -114,14 +125,14 @@ export function useMarkets(predictor: string | null): UseMarketsReturn {
       if (res.ok) loadLocal()
       return res
     },
-    [predictor, win.windowId, refresh, loadLocal],
+    [predictor, arenaId, win.windowId, refresh, loadLocal],
   )
 
   const placeMagnitude = useCallback(
     async (wallet: string, band: MagnitudeBand, stake: number = DEFAULT_STAKE): Promise<PlaceResult> => {
       if (!predictor) return { ok: false, error: 'not-connected' }
       if (liveRef.current) {
-        const res = await betMagnitude(wallet, predictor, band, stake)
+        const res = await betMagnitude(wallet, predictor, band, stake, arenaId)
         if (res.ok) await refresh()
         return res
       }
@@ -129,7 +140,7 @@ export function useMarkets(predictor: string | null): UseMarketsReturn {
       if (res.ok) loadLocal()
       return res
     },
-    [predictor, win.windowId, refresh, loadLocal],
+    [predictor, arenaId, win.windowId, refresh, loadLocal],
   )
 
   return {

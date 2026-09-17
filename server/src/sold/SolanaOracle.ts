@@ -36,12 +36,12 @@ export class SolanaOracle {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ jsonrpc: '2.0', id, method, params }),
         })
-        if (!res.ok) continue
+        if (!res.ok) { console.error(`rpc ${method} http ${res.status} via ${endpoint}`); continue }
         const data = (await res.json()) as { result?: T; error?: { code: number; message: string } }
-        if (data.error) continue
+        if (data.error) { console.error(`rpc ${method} error ${data.error.code}: ${data.error.message} via ${endpoint}`); continue }
         if (data.result !== undefined) return data.result
-      } catch {
-        // try next endpoint
+      } catch (e) {
+        console.error(`rpc ${method} threw via ${endpoint}: ${e instanceof Error ? e.message : e}`)
       }
     }
     return null
@@ -96,6 +96,40 @@ export class SolanaOracle {
         balanceNow: null,
       }
     })
+  }
+
+  /** Real top holders for any SPL mint, straight from the chain — no curated
+   *  wallet list needed. getTokenLargestAccounts caps at 20 token accounts;
+   *  each is resolved to its owning wallet via getMultipleAccounts (one
+   *  extra RPC call total, not one per holder). Never fabricates: an empty
+   *  or failed read returns []. */
+  async fetchTopHoldersByMint(mint: string, limit = 11): Promise<HolderBalance[]> {
+    type LargestResult = { value: { address: string; uiAmount: number | null }[] }
+    const largest = await this.rpcCall<LargestResult>(mint, 'getTokenLargestAccounts', [mint])
+    const accounts = (largest?.value ?? []).slice(0, limit)
+    if (accounts.length === 0) return []
+
+    type ParsedAccount = {
+      data: { parsed: { info: { owner: string; tokenAmount: { uiAmount: number | null } } } }
+    } | null
+    type MultiResult = { value: ParsedAccount[] }
+    const multi = await this.rpcCall<MultiResult>(
+      mint,
+      'getMultipleAccounts',
+      [accounts.map((a) => a.address), { encoding: 'jsonParsed' }],
+    )
+    const values = multi?.value ?? []
+
+    return accounts
+      .map((acc, i) => {
+        const info = values[i]?.data.parsed.info
+        return {
+          wallet: info?.owner ?? acc.address,
+          balance: info?.tokenAmount.uiAmount ?? acc.uiAmount ?? 0,
+          live: true,
+        }
+      })
+      .filter((h) => h.balance > 0)
   }
 
   /** Best-effort recent SPL-transfer activity for one wallet on this mint.

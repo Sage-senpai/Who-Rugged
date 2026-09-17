@@ -11,6 +11,7 @@ interface Props {
   holder: HolderMarket
   usdPrice: number | null
   totalSupply: number | null
+  arenaId: string
   onBack: () => void
   onPredict: () => void
 }
@@ -31,16 +32,16 @@ function relTime(ms: number): string {
   return `${Math.floor(h / 24)}d ago`
 }
 
-export function SelectHolder({ holder, usdPrice, totalSupply, onBack, onPredict }: Props) {
+export function SelectHolder({ holder, usdPrice, totalSupply, arenaId, onBack, onPredict }: Props) {
   const [activity, setActivity] = useState<ActivityEvent[] | null>(null)
 
   useEffect(() => {
     setActivity(null)
     if (!soldConfigured) return
     let active = true
-    void getActivity(holder.wallet, 10).then((rows) => { if (active) setActivity(rows) })
+    void getActivity(holder.wallet, 10, arenaId).then((rows) => { if (active) setActivity(rows) })
     return () => { active = false }
-  }, [holder.wallet])
+  }, [holder.wallet, arenaId])
 
   const pct = totalSupply ? (holder.balanceAtSnapshot / totalSupply) * 100 : null
   const value = usdPrice != null ? holder.balanceAtSnapshot * usdPrice : null

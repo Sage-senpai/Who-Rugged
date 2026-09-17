@@ -18,11 +18,11 @@ export function ArenaFlow() {
   const [usdPrice, setUsdPrice] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!a.isLive) return
+    if (!a.isLive || !a.arena) return
     let active = true
-    void getTokenPrice().then((p) => { if (active && p) setUsdPrice(p.usd) })
+    void getTokenPrice(a.arena.id).then((p) => { if (active && p) setUsdPrice(p.usd) })
     return () => { active = false }
-  }, [a.isLive])
+  }, [a.isLive, a.arena])
 
   const myInPlay = useMemo(() => {
     const all = [...a.markets.positions, ...a.markets.binaryPositions, ...a.markets.magnitudePositions]
@@ -50,7 +50,7 @@ export function ArenaFlow() {
           <Link to="/arena" className="arena-back">← Back to Arena</Link>
           <p className="arena-locked-note">
             {a.arena.name} ({a.arena.ticker}) isn't wired to a live backend yet — no tracked
-            wallets, no real odds. Enter the live ANSEM arena instead.
+            wallets, no real odds. Enter a live arena instead.
           </p>
         </div>
       </div>
@@ -63,7 +63,7 @@ export function ArenaFlow() {
       <div className="arena-wrap arena-page">
         {a.scene === 'scan' && <ScanHolders arena={a.arena} markets={a.markets} usdPrice={usdPrice} onSelect={a.selectHolder} />}
         {a.scene === 'holder' && a.holder && (
-          <SelectHolder holder={a.holder} usdPrice={usdPrice} totalSupply={a.arena.totalSupply}
+          <SelectHolder holder={a.holder} usdPrice={usdPrice} totalSupply={a.arena.totalSupply} arenaId={a.arena.id}
             onBack={a.back} onPredict={a.openMarketTypePicker} />
         )}
         {a.scene === 'marketType' && a.holder && (

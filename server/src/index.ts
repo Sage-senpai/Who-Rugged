@@ -16,6 +16,16 @@ import type { TrackedHolder, PredictionWindow, Prediction, Resolution, Predictor
 
 const ANSEM_MINT_DEFAULT = '9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump'
 
+/* Non-ANSEM arenas: real top holders come straight from the chain
+   (SolanaOracle.fetchTopHoldersByMint), no curated wallet list needed.
+   Mints confirmed independently (Solscan, Coinbase Assets, Solana Explorer)
+   2026-09-17 — verify again before trusting long-term, meme-coin mints do
+   occasionally get relaunched under new tickers. */
+const ARENA_MINTS: Record<string, string> = {
+  bonk: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+  wif: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
+}
+
 export interface Env {
   LOBBY_ROOM: DurableObjectNamespace<LobbyRoom>
   CASE_SEAL: DurableObjectNamespace<CaseSeal>
@@ -700,6 +710,21 @@ export default {
       const wid = windowId(hours)
       const pool = env.PREDICTION_POOL.getByName(wid)
 
+      // Arena selector — 'ansem' (default) keeps the legacy curated-registry
+      // path so /sold/play and existing ANSEM positions are untouched.
+      // Anything else must be a known dynamically-tracked mint.
+      const arenaParam = url.searchParams.get('arena') ?? 'ansem'
+      const arenaId = arenaParam === 'ansem' || ARENA_MINTS[arenaParam] ? arenaParam : 'ansem'
+      const arenaMint = arenaId === 'ansem' ? (env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT) : ARENA_MINTS[arenaId]
+      // Bucket-market id is namespaced per arena so each token gets its own
+      // window; ANSEM keeps its original (unnamespaced) id unchanged.
+      // v2: a bad first deploy left bonk/wif stuck as empty+settled (ensureOpen
+      // is idempotent, so an empty holders array from a transient RPC failure
+      // locked in permanently). Bumping forces fresh Durable Objects; drop
+      // once the next natural window rollover (2026-09-18T00:00 UTC) makes it
+      // moot.
+      const marketWid = arenaId === 'ansem' ? wid : `${arenaId}:v2:${windowId(hours)}`
+
       // curated + community-registered holders with current balances
       const buildHolders = async (): Promise<OpenHolder[]> => {
         const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
@@ -718,14 +743,29 @@ export default {
         })
       }
 
+      // Any non-ANSEM arena: real top holders straight from the chain, no
+      // curated wallet list to maintain. Handles/avatars fall back to the
+      // same Whale_XXXXXX synthesis lookupHolder already uses for unknown
+      // ANSEM wallets, so the UI looks identical either way.
+      const buildHoldersForMint = async (mint: string): Promise<OpenHolder[]> => {
+        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, mint)
+        const holders = await oracle.fetchTopHoldersByMint(mint)
+        return holders.map(({ wallet, balance }) => {
+          const meta = lookupHolder(wallet)
+          return { wallet, handle: meta.handle, avatarSeed: meta.avatarSeed, balanceAtSnapshot: balance } satisfies OpenHolder
+        })
+      }
+
+      const buildHoldersForArena = () => (arenaId === 'ansem' ? buildHolders() : buildHoldersForMint(arenaMint))
+
       // ── time-bucket markets (Polymarket-style, per-holder) ──
       if (url.pathname === '/sold/markets' && request.method === 'GET') {
-        const market = env.BUCKET_MARKET.getByName(wid)
+        const market = env.BUCKET_MARKET.getByName(marketWid)
         let state = await market.getMarket()
         if (!state) {
           const ms = hours * 3_600_000
           const opensAt = Math.floor(Date.now() / ms) * ms
-          await market.ensureOpen(wid, await buildHolders(), opensAt, opensAt + ms)
+          await market.ensureOpen(marketWid, await buildHoldersForArena(), opensAt, opensAt + ms)
           state = await market.getMarket() // re-read so realPools is always present
         }
         return json(state)
@@ -735,7 +775,7 @@ export default {
         let b: { predictor?: string; wallet?: string; bucket?: string; stake?: number }
         try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
         if (!b.predictor || !b.wallet || !b.bucket) return json({ error: 'missing-fields' }, 400)
-        const market = env.BUCKET_MARKET.getByName(wid)
+        const market = env.BUCKET_MARKET.getByName(marketWid)
         return json(await market.bet(b.predictor, b.wallet, b.bucket as BucketId, b.stake ?? 50))
       }
 
@@ -743,7 +783,7 @@ export default {
         let b: { predictor?: string; wallet?: string; side?: string; stake?: number }
         try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
         if (!b.predictor || !b.wallet || !b.side) return json({ error: 'missing-fields' }, 400)
-        const market = env.BUCKET_MARKET.getByName(wid)
+        const market = env.BUCKET_MARKET.getByName(marketWid)
         return json(await market.betBinary(b.predictor, b.wallet, b.side as BinarySide, b.stake ?? 50))
       }
 
@@ -751,22 +791,22 @@ export default {
         let b: { predictor?: string; wallet?: string; band?: string; stake?: number }
         try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
         if (!b.predictor || !b.wallet || !b.band) return json({ error: 'missing-fields' }, 400)
-        const market = env.BUCKET_MARKET.getByName(wid)
+        const market = env.BUCKET_MARKET.getByName(marketWid)
         return json(await market.betMagnitude(b.predictor, b.wallet, b.band as MagnitudeBand, b.stake ?? 50))
       }
 
       if (url.pathname === '/sold/market/positions' && request.method === 'GET') {
-        const market = env.BUCKET_MARKET.getByName(wid)
+        const market = env.BUCKET_MARKET.getByName(marketWid)
         return json(await market.getPositions(url.searchParams.get('predictor') ?? undefined))
       }
 
       if (url.pathname === '/sold/market/positions-binary' && request.method === 'GET') {
-        const market = env.BUCKET_MARKET.getByName(wid)
+        const market = env.BUCKET_MARKET.getByName(marketWid)
         return json(await market.getBinaryPositions(url.searchParams.get('predictor') ?? undefined))
       }
 
       if (url.pathname === '/sold/market/positions-magnitude' && request.method === 'GET') {
-        const market = env.BUCKET_MARKET.getByName(wid)
+        const market = env.BUCKET_MARKET.getByName(marketWid)
         return json(await market.getMagnitudePositions(url.searchParams.get('predictor') ?? undefined))
       }
 
@@ -774,12 +814,12 @@ export default {
         const wallet = url.searchParams.get('wallet') ?? ''
         if (wallet.length < 32 || wallet.length > 44) return json({ error: 'invalid-wallet' }, 400)
         const limit = parseInt(url.searchParams.get('limit') ?? '10')
-        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
+        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, arenaMint)
         return json(await oracle.fetchRecentActivity(wallet, limit))
       }
 
       if (url.pathname === '/sold/price' && request.method === 'GET') {
-        const mint = env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT
+        const mint = arenaMint
         try {
           const res = await fetch(`https://api.jup.ag/price/v2?ids=${mint}`)
           if (!res.ok) return json({ mint, usd: null, asOf: Date.now() })
@@ -792,11 +832,11 @@ export default {
       }
 
       if (url.pathname === '/sold/market/leaderboard' && request.method === 'GET') {
-        return json(await env.BUCKET_MARKET.getByName(wid).getLeaderboard())
+        return json(await env.BUCKET_MARKET.getByName(marketWid).getLeaderboard())
       }
 
       if (url.pathname === '/sold/market/resolve/manual' && request.method === 'POST') {
-        return json(await env.BUCKET_MARKET.getByName(wid).resolveManual())
+        return json(await env.BUCKET_MARKET.getByName(marketWid).resolveManual())
       }
 
       if (url.pathname === '/sold/window/current' && request.method === 'GET') {

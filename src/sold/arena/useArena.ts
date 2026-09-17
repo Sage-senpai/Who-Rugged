@@ -30,7 +30,7 @@ export function useArena(arenaId: string | undefined) {
   const arena = arenaId ? arenaById(arenaId) : undefined
   const isLive = arena?.status === 'live'
   const { address } = useSolana()
-  const markets = useMarkets(isLive ? address : null)
+  const markets = useMarkets(isLive ? address : null, arena?.id)
 
   const [scene, setScene] = useState<ArenaScene>('scan')
   const [holder, setHolder] = useState<HolderMarket | null>(null)

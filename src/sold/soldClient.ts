@@ -10,6 +10,15 @@ const RAW = import.meta.env.VITE_SOLD_URL as string | undefined
 export const SOLD_URL = RAW ? RAW.replace(/\/$/, '') : undefined
 export const soldConfigured = !!SOLD_URL
 
+/** Appends ?arena=<id> (or &arena=<id> if the path already has a query
+ *  string) when an arena other than the default is selected. Server
+ *  defaults to 'ansem' when the param is absent, so omitting it for the
+ *  default arena is just an optimization, not required for correctness. */
+function withArena(path: string, arena?: string): string {
+  if (!arena || arena === 'ansem') return path
+  return `${path}${path.includes('?') ? '&' : '?'}arena=${encodeURIComponent(arena)}`
+}
+
 async function get<T>(path: string, fallback: T): Promise<T> {
   if (!SOLD_URL) return fallback
   try {
@@ -72,40 +81,40 @@ export interface ServerMarkets {
   holders: HolderMarket[]
 }
 
-export const getMarkets = () => get<ServerMarkets | null>('/sold/markets', null)
+export const getMarkets = (arena?: string) => get<ServerMarkets | null>(withArena('/sold/markets', arena), null)
 
-export const betBucket = (wallet: string, predictor: string, bucket: BucketId, stake: number) =>
+export const betBucket = (wallet: string, predictor: string, bucket: BucketId, stake: number, arena?: string) =>
   post<{ ok: boolean; error?: string }>(
-    '/sold/market/bet',
+    withArena('/sold/market/bet', arena),
     { wallet, predictor, bucket, stake },
     { ok: false, error: 'not-configured' },
   )
 
-export const betBinary = (wallet: string, predictor: string, side: BinarySide, stake: number) =>
+export const betBinary = (wallet: string, predictor: string, side: BinarySide, stake: number, arena?: string) =>
   post<{ ok: boolean; error?: string }>(
-    '/sold/market/bet-binary',
+    withArena('/sold/market/bet-binary', arena),
     { wallet, predictor, side, stake },
     { ok: false, error: 'not-configured' },
   )
 
-export const betMagnitude = (wallet: string, predictor: string, band: MagnitudeBand, stake: number) =>
+export const betMagnitude = (wallet: string, predictor: string, band: MagnitudeBand, stake: number, arena?: string) =>
   post<{ ok: boolean; error?: string }>(
-    '/sold/market/bet-magnitude',
+    withArena('/sold/market/bet-magnitude', arena),
     { wallet, predictor, band, stake },
     { ok: false, error: 'not-configured' },
   )
 
-export const getMarketPositions = (predictor: string) =>
-  get<MarketPosition[]>(`/sold/market/positions?predictor=${encodeURIComponent(predictor)}`, [])
+export const getMarketPositions = (predictor: string, arena?: string) =>
+  get<MarketPosition[]>(withArena(`/sold/market/positions?predictor=${encodeURIComponent(predictor)}`, arena), [])
 
-export const getBinaryPositions = (predictor: string) =>
-  get<BinaryMarketPosition[]>(`/sold/market/positions-binary?predictor=${encodeURIComponent(predictor)}`, [])
+export const getBinaryPositions = (predictor: string, arena?: string) =>
+  get<BinaryMarketPosition[]>(withArena(`/sold/market/positions-binary?predictor=${encodeURIComponent(predictor)}`, arena), [])
 
-export const getMagnitudePositions = (predictor: string) =>
-  get<MagnitudeMarketPosition[]>(`/sold/market/positions-magnitude?predictor=${encodeURIComponent(predictor)}`, [])
+export const getMagnitudePositions = (predictor: string, arena?: string) =>
+  get<MagnitudeMarketPosition[]>(withArena(`/sold/market/positions-magnitude?predictor=${encodeURIComponent(predictor)}`, arena), [])
 
-export const getMarketLeaderboard = () =>
-  get<PredictorScore[]>('/sold/market/leaderboard', [])
+export const getMarketLeaderboard = (arena?: string) =>
+  get<PredictorScore[]>(withArena('/sold/market/leaderboard', arena), [])
 
 // ── on-chain activity + price (best-effort real data; never fabricated) ────────
 
@@ -116,11 +125,11 @@ export interface ActivityEvent {
   amount: number
 }
 
-export const getActivity = (wallet: string, limit = 10) =>
-  get<ActivityEvent[]>(`/sold/activity?wallet=${encodeURIComponent(wallet)}&limit=${limit}`, [])
+export const getActivity = (wallet: string, limit = 10, arena?: string) =>
+  get<ActivityEvent[]>(withArena(`/sold/activity?wallet=${encodeURIComponent(wallet)}&limit=${limit}`, arena), [])
 
-export const getTokenPrice = () =>
-  get<{ mint: string; usd: number | null; asOf: number } | null>('/sold/price', null)
+export const getTokenPrice = (arena?: string) =>
+  get<{ mint: string; usd: number | null; asOf: number } | null>(withArena('/sold/price', arena), null)
 
 // ── registration ───────────────────────────────────────────────────────────────
 
