@@ -13,6 +13,19 @@ import type { ArenaScene, MarketKind } from './arenaTypes'
 
 export type Outcome = { kind: 'binary'; side: BinarySide } | { kind: 'magnitude'; band: MagnitudeBand }
 
+function commitErrorMessage(code?: string): string {
+  switch (code) {
+    case 'window-closed': return "This prediction window has closed — no more bets can land here."
+    case 'holder-locked': return "This holder's outcome is already known — betting closed the moment it was detected."
+    case 'market-not-open': return 'This market is not open yet.'
+    case 'not-connected': return 'Connect your wallet to place a bet.'
+    case 'bad-stake': return 'Enter a valid stake.'
+    case 'unknown-wallet': return "This holder isn't tracked in the current window."
+    case 'not-configured': return "Can't reach the market right now — check your connection and try again."
+    default: return "Your bet didn't go through — try again."
+  }
+}
+
 export function useArena(arenaId: string | undefined) {
   const arena = arenaId ? arenaById(arenaId) : undefined
   const isLive = arena?.status === 'live'
@@ -25,6 +38,8 @@ export function useArena(arenaId: string | undefined) {
   const [outcome, setOutcome] = useState<Outcome | null>(null)
   const [stake, setStake] = useState(DEFAULT_STAKE)
   const [committed, setCommitted] = useState(false)
+  const [committing, setCommitting] = useState(false)
+  const [commitError, setCommitError] = useState<string | null>(null)
 
   const selectHolder = useCallback((h: HolderMarket) => {
     setHolder(h)
@@ -45,10 +60,12 @@ export function useArena(arenaId: string | undefined) {
   const selectOutcome = useCallback((o: Outcome, s: number) => {
     setOutcome(o)
     setStake(s)
+    setCommitError(null)
     setScene('review')
   }, [])
 
   const back = useCallback(() => {
+    setCommitError(null)
     setScene((s) => {
       if (s === 'holder') return 'scan'
       if (s === 'marketType') return 'holder'
@@ -58,10 +75,18 @@ export function useArena(arenaId: string | undefined) {
     })
   }, [])
 
-  const commit = useCallback(() => {
+  const commit = useCallback(async () => {
     if (!holder || !outcome) return
-    if (outcome.kind === 'binary') markets.placeBinary(holder.wallet, outcome.side, stake)
-    else markets.placeMagnitude(holder.wallet, outcome.band, stake)
+    setCommitting(true)
+    setCommitError(null)
+    const res = outcome.kind === 'binary'
+      ? await markets.placeBinary(holder.wallet, outcome.side, stake)
+      : await markets.placeMagnitude(holder.wallet, outcome.band, stake)
+    setCommitting(false)
+    if (!res.ok) {
+      setCommitError(commitErrorMessage(res.error))
+      return
+    }
     setCommitted(true)
     setScene('locked')
   }, [holder, outcome, stake, markets])
@@ -71,6 +96,7 @@ export function useArena(arenaId: string | undefined) {
     setMarketKind(null)
     setOutcome(null)
     setCommitted(false)
+    setCommitError(null)
     setScene('scan')
   }, [])
 
@@ -84,6 +110,8 @@ export function useArena(arenaId: string | undefined) {
       outcome,
       stake,
       committed,
+      committing,
+      commitError,
       markets,
       selectHolder,
       openMarketTypePicker,
@@ -93,7 +121,7 @@ export function useArena(arenaId: string | undefined) {
       commit,
       reset,
     }),
-    [arena, isLive, scene, holder, marketKind, outcome, stake, committed, markets,
+    [arena, isLive, scene, holder, marketKind, outcome, stake, committed, committing, commitError, markets,
       selectHolder, openMarketTypePicker, selectMarketType, selectOutcome, back, commit, reset],
   )
 }

@@ -230,6 +230,7 @@
   display: flex; gap: 10px; padding: 12px 14px; border-radius: var(--ar-radius-sm);
   background: var(--ar-accent-dim); color: var(--ar-accent); font-size: 12px; margin: 16px 0;
 }
+.arena-warning-error { background: var(--ar-negative-dim); color: var(--ar-negative); }
 
 /* ── coming soon ────────────────────────────────────────────────────── */
 .arena-soon-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 8px; }

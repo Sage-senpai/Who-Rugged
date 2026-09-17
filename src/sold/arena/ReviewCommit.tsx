@@ -12,12 +12,15 @@ interface Props {
   marketKind: MarketKind
   outcome: Outcome
   stake: number
+  committing: boolean
+  commitError: string | null
   onBack: () => void
   onCommit: () => void
 }
 
-export function ReviewCommit({ holder, marketKind, outcome, stake, onBack, onCommit }: Props) {
+export function ReviewCommit({ holder, marketKind, outcome, stake, committing, commitError, onBack, onCommit }: Props) {
   const countdown = useCountdown(holder.closesAt)
+  const closed = countdown === 'CLOSED'
 
   const predictionLabel =
     outcome.kind === 'binary' ? binaryById(outcome.side).label : magnitudeById(outcome.band).label
@@ -37,7 +40,7 @@ export function ReviewCommit({ holder, marketKind, outcome, stake, onBack, onCom
         </div>
         <div className="arena-timer">
           <span className="arena-timer-lab">PREDICTION WINDOW</span>
-          <span className="arena-timer-val">{countdown}</span>
+          <span className={`arena-timer-val ${closed ? 'arena-pnl-down' : ''}`}>{countdown}</span>
         </div>
       </div>
 
@@ -70,12 +73,26 @@ export function ReviewCommit({ holder, marketKind, outcome, stake, onBack, onCom
         </div>
       </div>
 
-      <div className="arena-warning">
-        ⚠ Once you lock your bet, it cannot be changed. Your prediction stays hidden until resolution.
-      </div>
+      {closed ? (
+        <div className="arena-warning">
+          ⚠ This window has closed. No more bets can be placed on this holder here — go back and pick another.
+        </div>
+      ) : (
+        <div className="arena-warning">
+          ⚠ Once you lock your bet, it cannot be changed. Your prediction stays hidden until resolution.
+        </div>
+      )}
 
-      <button className="arena-btn arena-btn-primary arena-btn-lg arena-btn-block" onClick={onCommit}>
-        🔒 Lock Bet
+      {commitError && (
+        <div className="arena-warning arena-warning-error">⚠ {commitError}</div>
+      )}
+
+      <button
+        className="arena-btn arena-btn-primary arena-btn-lg arena-btn-block"
+        onClick={onCommit}
+        disabled={closed || committing}
+      >
+        {committing ? 'Locking…' : '🔒 Lock Bet'}
       </button>
     </div>
   )

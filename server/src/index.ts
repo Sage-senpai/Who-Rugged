@@ -446,7 +446,15 @@ function windowId(hours: number): string {
   const ms = hours * 3_600_000
   const slot = Math.floor(Date.now() / ms) * ms
   const d = new Date(slot)
-  return `sold-${d.toISOString().slice(0, 10)}-${hours}h`
+  // Bug fixed 2026-09-17: slicing to just the date collapsed every slot of the
+  // same calendar day onto one id (e.g. both the 00:00 and 12:00 UTC windows
+  // for a 12h window became "sold-2026-09-17-12h"). Since ensureOpen() is
+  // idempotent, the second slot of each day silently reused the first slot's
+  // already-closed state instead of opening fresh — the market was
+  // unbettable for up to `24 - hours` hours out of every 24. Including the
+  // slot's own start hour makes every slot's id unique.
+  const hh = String(d.getUTCHours()).padStart(2, '0')
+  return `sold-${d.toISOString().slice(0, 10)}-${hh}00-${hours}h`
 }
 
 export class PredictionPool extends DurableObject<Env> {

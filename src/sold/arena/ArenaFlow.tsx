@@ -77,7 +77,7 @@ export function ArenaFlow() {
         )}
         {a.scene === 'review' && a.holder && a.outcome && (
           <ReviewCommit holder={a.holder} marketKind={a.marketKind!} outcome={a.outcome} stake={a.stake}
-            onBack={a.back} onCommit={a.commit} />
+            committing={a.committing} commitError={a.commitError} onBack={a.back} onCommit={a.commit} />
         )}
         {a.scene === 'locked' && <ComingSoon onDone={a.reset} />}
       </div>

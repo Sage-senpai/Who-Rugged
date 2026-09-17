@@ -12,7 +12,9 @@ import {
 import type { BucketId } from './buckets'
 import type { BinarySide } from './binary'
 import type { MagnitudeBand } from './magnitude'
-import type { HolderMarket, MarketPosition, BinaryMarketPosition, MagnitudeMarketPosition } from './marketTypes'
+import type {
+  HolderMarket, MarketPosition, BinaryMarketPosition, MagnitudeMarketPosition, PlaceResult,
+} from './marketTypes'
 import {
   buildMarket, placeBet, myPositions, placeBinaryBet, myBinaryPositions,
   placeMagnitudeBet, myMagnitudePositions, DEFAULT_STAKE,
@@ -32,9 +34,9 @@ export interface UseMarketsReturn {
   loading: boolean
   /** true when pools are shared/server-backed, false when local-only. */
   live: boolean
-  place: (wallet: string, bucket: BucketId, stake?: number) => void
-  placeBinary: (wallet: string, side: BinarySide, stake?: number) => void
-  placeMagnitude: (wallet: string, band: MagnitudeBand, stake?: number) => void
+  place: (wallet: string, bucket: BucketId, stake?: number) => Promise<PlaceResult>
+  placeBinary: (wallet: string, side: BinarySide, stake?: number) => Promise<PlaceResult>
+  placeMagnitude: (wallet: string, band: MagnitudeBand, stake?: number) => Promise<PlaceResult>
   defaultStake: number
 }
 
@@ -86,46 +88,46 @@ export function useMarkets(predictor: string | null): UseMarketsReturn {
   }, [refresh])
 
   const place = useCallback(
-    (wallet: string, bucket: BucketId, stake: number = DEFAULT_STAKE) => {
-      if (!predictor) return
+    async (wallet: string, bucket: BucketId, stake: number = DEFAULT_STAKE): Promise<PlaceResult> => {
+      if (!predictor) return { ok: false, error: 'not-connected' }
       if (liveRef.current) {
-        void betBucket(wallet, predictor, bucket, stake).then((res) => {
-          if (res.ok) void refresh()
-        })
-      } else {
-        const res = placeBet(win.windowId, wallet, bucket, stake, predictor)
-        if (res.ok) loadLocal()
+        const res = await betBucket(wallet, predictor, bucket, stake)
+        if (res.ok) await refresh()
+        return res
       }
+      const res = placeBet(win.windowId, wallet, bucket, stake, predictor)
+      if (res.ok) loadLocal()
+      return res
     },
     [predictor, win.windowId, refresh, loadLocal],
   )
 
   const placeBinary = useCallback(
-    (wallet: string, side: BinarySide, stake: number = DEFAULT_STAKE) => {
-      if (!predictor) return
+    async (wallet: string, side: BinarySide, stake: number = DEFAULT_STAKE): Promise<PlaceResult> => {
+      if (!predictor) return { ok: false, error: 'not-connected' }
       if (liveRef.current) {
-        void betBinary(wallet, predictor, side, stake).then((res) => {
-          if (res.ok) void refresh()
-        })
-      } else {
-        const res = placeBinaryBet(win.windowId, wallet, side, stake, predictor)
-        if (res.ok) loadLocal()
+        const res = await betBinary(wallet, predictor, side, stake)
+        if (res.ok) await refresh()
+        return res
       }
+      const res = placeBinaryBet(win.windowId, wallet, side, stake, predictor)
+      if (res.ok) loadLocal()
+      return res
     },
     [predictor, win.windowId, refresh, loadLocal],
   )
 
   const placeMagnitude = useCallback(
-    (wallet: string, band: MagnitudeBand, stake: number = DEFAULT_STAKE) => {
-      if (!predictor) return
+    async (wallet: string, band: MagnitudeBand, stake: number = DEFAULT_STAKE): Promise<PlaceResult> => {
+      if (!predictor) return { ok: false, error: 'not-connected' }
       if (liveRef.current) {
-        void betMagnitude(wallet, predictor, band, stake).then((res) => {
-          if (res.ok) void refresh()
-        })
-      } else {
-        const res = placeMagnitudeBet(win.windowId, wallet, band, stake, predictor)
-        if (res.ok) loadLocal()
+        const res = await betMagnitude(wallet, predictor, band, stake)
+        if (res.ok) await refresh()
+        return res
       }
+      const res = placeMagnitudeBet(win.windowId, wallet, band, stake, predictor)
+      if (res.ok) loadLocal()
+      return res
     },
     [predictor, win.windowId, refresh, loadLocal],
   )
