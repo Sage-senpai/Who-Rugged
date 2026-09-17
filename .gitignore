@@ -14,6 +14,7 @@ build/
 
 # internal working notes (not for the public repo)
 docs/PARTNER_QA.md
+docs/MULTICHAIN_EXPANSION.md
 
 # secrets and environment
 .env

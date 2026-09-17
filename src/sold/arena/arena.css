@@ -246,7 +246,35 @@
   padding: 60px 20px; text-align: center; color: var(--ar-text-dim); font-size: 13px;
 }
 
+/* ── portfolio / leaderboard ────────────────────────────────────────── */
+.arena-portfolio-summary {
+  display: flex; gap: 12px; margin: 16px 0 20px;
+}
+.arena-portfolio-summary > div {
+  flex: 1; background: var(--ar-surface); border: 1px solid var(--ar-border);
+  border-radius: var(--ar-radius-sm); padding: 14px 16px;
+}
+.arena-portfolio-summary-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--ar-text-dim); text-transform: uppercase;
+}
+.arena-portfolio-summary-value {
+  font-family: var(--ar-mono); font-size: 20px; font-weight: 800; margin-top: 4px;
+}
+.arena-pnl-up { color: var(--ar-positive); }
+.arena-pnl-down { color: var(--ar-negative); }
+
+.arena-status {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.8px; padding: 3px 8px; border-radius: 5px;
+}
+.arena-status-pending { background: var(--ar-accent-dim); color: var(--ar-accent); }
+.arena-status-won { background: var(--ar-positive-dim); color: var(--ar-positive); }
+.arena-status-lost { background: var(--ar-negative-dim); color: var(--ar-negative); }
+
+.arena-row-me { background: var(--ar-accent-dim); }
+
 @media (max-width: 760px) {
   .arena-detail-grid, .arena-mtype-grid, .arena-stat-grid { grid-template-columns: 1fr; }
   .arena-topbar { flex-wrap: wrap; }
+  .arena-portfolio-summary { flex-direction: column; }
+  .arena-table-wrap { overflow-x: auto; }
 }

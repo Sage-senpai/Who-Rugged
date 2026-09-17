@@ -1,6 +1,11 @@
 /* Scenes 7-9 (Bet Locked / Holder Acts / Resolution) as one static pipeline —
    the storyboard itself leaves these unshaped, so this matches that treatment
-   rather than inventing UI the source design doesn't specify. */
+   rather than inventing UI the source design doesn't specify. Resolution
+   itself already happens server-side (BucketMarket's sample/settle cycle);
+   Portfolio is where that becomes visible, so this links there instead of
+   just describing the pipeline in the abstract. */
+import { Link } from 'react-router-dom'
+
 interface Props {
   onDone: () => void
 }
@@ -32,9 +37,10 @@ export function ComingSoon({ onDone }: Props) {
         </div>
       </div>
 
-      <button className="arena-btn arena-btn-ghost" style={{ marginTop: 20 }} onClick={onDone}>
-        ← Back to Scan Holders
-      </button>
+      <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+        <Link to="/portfolio" className="arena-btn arena-btn-primary">Track it in Portfolio →</Link>
+        <button className="arena-btn arena-btn-ghost" onClick={onDone}>← Back to Scan Holders</button>
+      </div>
     </div>
   )
 }

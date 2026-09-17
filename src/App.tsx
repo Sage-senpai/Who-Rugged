@@ -26,6 +26,8 @@ const WhoSold = lazy(() => import('./sold/WhoSold').then((m) => ({ default: m.Wh
 const SoldLanding = lazy(() => import('./sold/SoldLanding').then((m) => ({ default: m.SoldLanding })))
 const ArenaHome = lazy(() => import('./sold/arena/ArenaHome').then((m) => ({ default: m.ArenaHome })))
 const ArenaFlow = lazy(() => import('./sold/arena/ArenaFlow').then((m) => ({ default: m.ArenaFlow })))
+const Portfolio = lazy(() => import('./sold/arena/Portfolio').then((m) => ({ default: m.Portfolio })))
+const Leaderboard = lazy(() => import('./sold/arena/Leaderboard').then((m) => ({ default: m.Leaderboard })))
 
 export default function App() {
   return (
@@ -57,6 +59,8 @@ export default function App() {
             <Route path="/sold/play" element={<WhoSold />} />
             <Route path="/arena" element={<ArenaHome />} />
             <Route path="/arena/:arenaId" element={<ArenaFlow />} />
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="*" element={<SoldLanding />} />
           </Routes>
         </Suspense>

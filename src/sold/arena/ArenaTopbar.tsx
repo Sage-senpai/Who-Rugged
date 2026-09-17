@@ -25,8 +25,8 @@ export function ArenaTopbar({ inPlay }: Props) {
 
       <nav className="arena-nav">
         <Link to="/" className={pathname === '/' || pathname.startsWith('/arena') ? 'active' : ''}>ARENAS</Link>
-        <span title="Coming soon">PORTFOLIO</span>
-        <span title="Coming soon">LEADERBOARD</span>
+        <Link to="/portfolio" className={pathname === '/portfolio' ? 'active' : ''}>PORTFOLIO</Link>
+        <Link to="/leaderboard" className={pathname === '/leaderboard' ? 'active' : ''}>LEADERBOARD</Link>
         <span title="Coming soon">HISTORY</span>
       </nav>
 
