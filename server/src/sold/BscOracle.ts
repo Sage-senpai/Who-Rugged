@@ -11,11 +11,11 @@ const ENDPOINT = 'https://streaming.bitquery.io/graphql'
 
 const HOLDERS_QUERY = `
   query ($contract: String!, $limit: Int!) {
-    EVM(network: bsc, dataset: combined) {
+    EVM(network: bsc, dataset: realtime) {
       Holders(
         where: { Currency: { SmartContract: { is: $contract } } }
         orderBy: { descending: Balance_Amount }
-        limit: $limit
+        limit: { count: $limit }
       ) {
         Holder { Address }
         Balance { Amount }

@@ -3,10 +3,11 @@ import type { ArenaDef } from './arenaTypes'
 /* Arenas, by how their top holders get read (server/src/index.ts's
    ARENA_SOURCES has the matching entry for anything not 'ansem'):
    - Solana native RPC: ansem (curated registry), bonk, wif
-   - BSC via Moralis (needs MORALIS_API_KEY): floki, babydoge, broccoli —
-     held 'locked' until that key is confirmed working, same discipline as
-     bonk/wif before ALCHEMY_API_KEY was fixed. Flip to 'live' once
-     /sold/markets?arena=floki returns real holders.
+   - BSC via Bitquery: floki, babydoge, broccoli. Note: the top "holder" on
+     both floki and babydoge is 0x000...dead, the standard burn address —
+     real on-chain data, just never a wallet that will predictably act, so
+     it's an odd first row to bet on. Worth filtering out of the ranked list
+     in a follow-up pass rather than fixing silently right now.
    - Zash's own public API, no key needed (the "meta-layer" arena type —
      WHO RUGGED? runs prediction markets on tokens Zash itself launched):
      zash-arc, zash-seis. SEIS's raise hasn't started, so it may show as
@@ -50,7 +51,7 @@ export const ARENAS: ArenaDef[] = [
     ticker: '$FLOKI',
     mint: '0xfb5b838b6cfeedc2873ab27866079ac55363d37e',
     totalSupply: 9_640_000_000_000,
-    status: 'locked',
+    status: 'live',
   },
   {
     id: 'babydoge',
@@ -58,7 +59,7 @@ export const ARENAS: ArenaDef[] = [
     ticker: '$BABYDOGE',
     mint: '0xc748673057861a797275CD8A068AbB95A902e8de',
     totalSupply: 420_000_000_000_000_000,
-    status: 'locked',
+    status: 'live',
   },
   {
     id: 'broccoli',
@@ -66,7 +67,7 @@ export const ARENAS: ArenaDef[] = [
     ticker: '$BROCCOLI',
     mint: '0x6d5ad1592ed9d6d1df9b93c793ab759573ed6714',
     totalSupply: 970_000_000,
-    status: 'locked',
+    status: 'live',
   },
   {
     id: 'zash-arc',

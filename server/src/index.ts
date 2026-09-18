@@ -734,11 +734,18 @@ export default {
       const arenaSource: ArenaSource | null = arenaId === 'ansem' ? null : ARENA_SOURCES[arenaId]
       // Bucket-market id is namespaced per arena so each token gets its own
       // window; ANSEM keeps its original (unnamespaced) id unchanged.
-      // v3: an earlier bad run (before ALCHEMY_API_KEY was fixed) left bonk/wif
-      // stuck as empty+settled — bumping forced fresh Durable Objects. Drop
-      // this versioning once the next natural window rollover
-      // (2026-09-18T00:00 UTC) makes it moot.
-      const marketWid = arenaId === 'ansem' ? wid : `${arenaId}:v3:${windowId(hours)}`
+      // Per-arena version tags force a fresh Durable Object the first time an
+      // arena's data source actually works, after an earlier bad run (missing
+      // or broken API key) left it stuck empty+settled — ensureOpen() is
+      // idempotent, so without a version bump it would keep serving that
+      // stale empty state forever. Bumping is scoped to just the arena(s)
+      // that needed it so already-live arenas with real positions (bonk, wif,
+      // the zash ones) aren't reset. bonk/wif were v2, so global default
+      // stays v3; floki/babydoge/broccoli never had a working key until now,
+      // so they start at v4.
+      const ARENA_VERSION: Record<string, string> = { floki: 'v6', babydoge: 'v6', broccoli: 'v6' }
+      const marketVersion = ARENA_VERSION[arenaId] ?? 'v3'
+      const marketWid = arenaId === 'ansem' ? wid : `${arenaId}:${marketVersion}:${windowId(hours)}`
 
       const toOpenHolder = ({ wallet, balance }: { wallet: string; balance: number }): OpenHolder => {
         const meta = lookupHolder(wallet)
