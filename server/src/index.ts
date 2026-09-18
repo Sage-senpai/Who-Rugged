@@ -19,7 +19,7 @@ import type { TrackedHolder, PredictionWindow, Prediction, Resolution, Predictor
 const ANSEM_MINT_DEFAULT = '9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump'
 
 /* Non-ANSEM arenas: real top holders come straight from a source that needs
-   no curated wallet list — native RPC for Solana, Moralis for BSC (no BSC
+   no curated wallet list — native RPC for Solana, Bitquery for BSC (no BSC
    equivalent of getTokenLargestAccounts exists), or Zash's own public API
    for tokens it launched itself (the "meta-layer" arena type). Mints/
    contracts confirmed independently (Solscan/BscScan + CoinGecko or the
@@ -52,7 +52,7 @@ export interface Env {
   OG_COMPUTE_MODEL_ID?: string
   ALCHEMY_API_KEY?: string
   ANSEM_MINT?: string
-  MORALIS_API_KEY?: string
+  BITQUERY_API_KEY?: string
   SOLD_SELL_THRESHOLD?: string
   SOLD_PREDICTION_WINDOW_HOURS?: string
   SOLD_MIN_REG_BALANCE?: string
@@ -774,7 +774,7 @@ export default {
           return (await oracle.fetchTopHoldersByMint(arenaSource.mint)).map(toOpenHolder)
         }
         if (arenaSource.kind === 'bsc') {
-          const oracle = new BscOracle(env.MORALIS_API_KEY)
+          const oracle = new BscOracle(env.BITQUERY_API_KEY)
           return (await oracle.fetchTopHolders(arenaSource.contract)).map(toOpenHolder)
         }
         return (await new ZashClient().fetchTopHolders(arenaSource.projectId)).map(toOpenHolder)
