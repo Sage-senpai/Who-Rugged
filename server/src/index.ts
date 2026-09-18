@@ -10,20 +10,35 @@
    OG_COMPUTE_API_KEY), so it runs in the Worker with a plain fetch. */
 import { DurableObject } from 'cloudflare:workers'
 import { SolanaOracle } from './sold/SolanaOracle'
+import { BscOracle } from './sold/BscOracle'
+import { ZashClient } from './sold/ZashClient'
 import { TRACKED_WALLETS, lookupHolder } from './sold/holderRegistry'
 import { BucketMarket, type OpenHolder } from './sold/BucketMarket'
 import type { TrackedHolder, PredictionWindow, Prediction, Resolution, PredictorScore, RegisteredHolder, BatchWindow, BatchResult, BatchPrediction, BucketId, BinarySide, MagnitudeBand } from './sold/types'
 
 const ANSEM_MINT_DEFAULT = '9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump'
 
-/* Non-ANSEM arenas: real top holders come straight from the chain
-   (SolanaOracle.fetchTopHoldersByMint), no curated wallet list needed.
-   Mints confirmed independently (Solscan, Coinbase Assets, Solana Explorer)
-   2026-09-17 — verify again before trusting long-term, meme-coin mints do
-   occasionally get relaunched under new tickers. */
-const ARENA_MINTS: Record<string, string> = {
-  bonk: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
-  wif: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
+/* Non-ANSEM arenas: real top holders come straight from a source that needs
+   no curated wallet list — native RPC for Solana, Moralis for BSC (no BSC
+   equivalent of getTokenLargestAccounts exists), or Zash's own public API
+   for tokens it launched itself (the "meta-layer" arena type). Mints/
+   contracts confirmed independently (Solscan/BscScan + CoinGecko or the
+   project's own docs) 2026-09-18 — re-verify before trusting long-term,
+   meme-coin mints do occasionally get relaunched under new tickers. Zash
+   project ids come straight from GET https://zash.xyz/api/v1/projects. */
+type ArenaSource =
+  | { kind: 'solana'; mint: string }
+  | { kind: 'bsc'; contract: string }
+  | { kind: 'zash'; projectId: string }
+
+const ARENA_SOURCES: Record<string, ArenaSource> = {
+  bonk: { kind: 'solana', mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263' },
+  wif: { kind: 'solana', mint: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm' },
+  floki: { kind: 'bsc', contract: '0xfb5b838b6cfeedc2873ab27866079ac55363d37e' },
+  babydoge: { kind: 'bsc', contract: '0xc748673057861a797275CD8A068AbB95A902e8de' },
+  broccoli: { kind: 'bsc', contract: '0x6d5ad1592ed9d6d1df9b93c793ab759573ed6714' },
+  'zash-arc': { kind: 'zash', projectId: 'efc45ec0-a705-4a28-b3ad-97a3d743770e' },
+  'zash-seis': { kind: 'zash', projectId: '4c7494e4-5126-4e84-bb75-2bcebb39cbed' },
 }
 
 export interface Env {
@@ -37,6 +52,7 @@ export interface Env {
   OG_COMPUTE_MODEL_ID?: string
   ALCHEMY_API_KEY?: string
   ANSEM_MINT?: string
+  MORALIS_API_KEY?: string
   SOLD_SELL_THRESHOLD?: string
   SOLD_PREDICTION_WINDOW_HOURS?: string
   SOLD_MIN_REG_BALANCE?: string
@@ -712,17 +728,22 @@ export default {
 
       // Arena selector — 'ansem' (default) keeps the legacy curated-registry
       // path so /sold/play and existing ANSEM positions are untouched.
-      // Anything else must be a known dynamically-tracked mint.
+      // Anything else must be a known arena source.
       const arenaParam = url.searchParams.get('arena') ?? 'ansem'
-      const arenaId = arenaParam === 'ansem' || ARENA_MINTS[arenaParam] ? arenaParam : 'ansem'
-      const arenaMint = arenaId === 'ansem' ? (env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT) : ARENA_MINTS[arenaId]
+      const arenaId = arenaParam === 'ansem' || ARENA_SOURCES[arenaParam] ? arenaParam : 'ansem'
+      const arenaSource: ArenaSource | null = arenaId === 'ansem' ? null : ARENA_SOURCES[arenaId]
       // Bucket-market id is namespaced per arena so each token gets its own
       // window; ANSEM keeps its original (unnamespaced) id unchanged.
-      // v3: v2's bad run (before ALCHEMY_API_KEY was fixed) also left bonk/wif
-      // stuck as empty+settled. Bumping again forces fresh Durable Objects now
-      // that the key actually works; drop this versioning once the next
-      // natural window rollover (2026-09-18T00:00 UTC) makes it moot.
+      // v3: an earlier bad run (before ALCHEMY_API_KEY was fixed) left bonk/wif
+      // stuck as empty+settled — bumping forced fresh Durable Objects. Drop
+      // this versioning once the next natural window rollover
+      // (2026-09-18T00:00 UTC) makes it moot.
       const marketWid = arenaId === 'ansem' ? wid : `${arenaId}:v3:${windowId(hours)}`
+
+      const toOpenHolder = ({ wallet, balance }: { wallet: string; balance: number }): OpenHolder => {
+        const meta = lookupHolder(wallet)
+        return { wallet, handle: meta.handle, avatarSeed: meta.avatarSeed, balanceAtSnapshot: balance }
+      }
 
       // curated + community-registered holders with current balances
       const buildHolders = async (): Promise<OpenHolder[]> => {
@@ -742,20 +763,22 @@ export default {
         })
       }
 
-      // Any non-ANSEM arena: real top holders straight from the chain, no
+      // Any non-ANSEM arena: real top holders straight from the source, no
       // curated wallet list to maintain. Handles/avatars fall back to the
       // same Whale_XXXXXX synthesis lookupHolder already uses for unknown
-      // ANSEM wallets, so the UI looks identical either way.
-      const buildHoldersForMint = async (mint: string): Promise<OpenHolder[]> => {
-        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, mint)
-        const holders = await oracle.fetchTopHoldersByMint(mint)
-        return holders.map(({ wallet, balance }) => {
-          const meta = lookupHolder(wallet)
-          return { wallet, handle: meta.handle, avatarSeed: meta.avatarSeed, balanceAtSnapshot: balance } satisfies OpenHolder
-        })
+      // ANSEM wallets, so the UI looks identical regardless of chain.
+      const buildHoldersForArena = async (): Promise<OpenHolder[]> => {
+        if (!arenaSource) return buildHolders()
+        if (arenaSource.kind === 'solana') {
+          const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, arenaSource.mint)
+          return (await oracle.fetchTopHoldersByMint(arenaSource.mint)).map(toOpenHolder)
+        }
+        if (arenaSource.kind === 'bsc') {
+          const oracle = new BscOracle(env.MORALIS_API_KEY)
+          return (await oracle.fetchTopHolders(arenaSource.contract)).map(toOpenHolder)
+        }
+        return (await new ZashClient().fetchTopHolders(arenaSource.projectId)).map(toOpenHolder)
       }
-
-      const buildHoldersForArena = () => (arenaId === 'ansem' ? buildHolders() : buildHoldersForMint(arenaMint))
 
       // ── time-bucket markets (Polymarket-style, per-holder) ──
       if (url.pathname === '/sold/markets' && request.method === 'GET') {
@@ -811,14 +834,26 @@ export default {
 
       if (url.pathname === '/sold/activity' && request.method === 'GET') {
         const wallet = url.searchParams.get('wallet') ?? ''
-        if (wallet.length < 32 || wallet.length > 44) return json({ error: 'invalid-wallet' }, 400)
         const limit = parseInt(url.searchParams.get('limit') ?? '10')
-        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, arenaMint)
+        // Best-effort activity feed only exists for Solana today — BSC and
+        // Zash arenas honestly return empty rather than fabricate rows.
+        if (arenaSource && arenaSource.kind !== 'solana') return json([])
+        if (wallet.length < 32 || wallet.length > 44) return json({ error: 'invalid-wallet' }, 400)
+        const mint = arenaSource ? arenaSource.mint : (env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
+        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, mint)
         return json(await oracle.fetchRecentActivity(wallet, limit))
       }
 
       if (url.pathname === '/sold/price' && request.method === 'GET') {
-        const mint = arenaMint
+        if (arenaSource?.kind === 'zash') {
+          const usd = await new ZashClient().fetchPrice(arenaSource.projectId)
+          return json({ mint: arenaSource.projectId, usd, asOf: Date.now() })
+        }
+        if (arenaSource?.kind === 'bsc') {
+          // No BSC price feed wired yet — honest null, not fabricated.
+          return json({ mint: arenaSource.contract, usd: null, asOf: Date.now() })
+        }
+        const mint = arenaSource ? arenaSource.mint : (env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
         try {
           const res = await fetch(`https://api.jup.ag/price/v2?ids=${mint}`)
           if (!res.ok) return json({ mint, usd: null, asOf: Date.now() })

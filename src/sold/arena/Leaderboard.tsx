@@ -37,6 +37,11 @@ export function Leaderboard() {
       getMarketLeaderboard('ansem'),
       getMarketLeaderboard('bonk'),
       getMarketLeaderboard('wif'),
+      getMarketLeaderboard('floki'),
+      getMarketLeaderboard('babydoge'),
+      getMarketLeaderboard('broccoli'),
+      getMarketLeaderboard('zash-arc'),
+      getMarketLeaderboard('zash-seis'),
     ]).then((results) => { if (active) setRows(merge(results)) })
     return () => { active = false }
   }, [])

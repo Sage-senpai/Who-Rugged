@@ -97,13 +97,21 @@ export function Portfolio() {
   const ansem = useMarkets(address, 'ansem')
   const bonk = useMarkets(address, 'bonk')
   const wif = useMarkets(address, 'wif')
-  const anyLoading = ansem.loading || bonk.loading || wif.loading
-  const anyLive = ansem.live || bonk.live || wif.live
+  const floki = useMarkets(address, 'floki')
+  const babydoge = useMarkets(address, 'babydoge')
+  const broccoli = useMarkets(address, 'broccoli')
+  const zashArc = useMarkets(address, 'zash-arc')
+  const zashSeis = useMarkets(address, 'zash-seis')
+  const all: [string, UseMarketsReturn][] = [
+    ['ansem', ansem], ['bonk', bonk], ['wif', wif], ['floki', floki], ['babydoge', babydoge],
+    ['broccoli', broccoli], ['zash-arc', zashArc], ['zash-seis', zashSeis],
+  ]
+  const anyLoading = all.some(([, m]) => m.loading)
+  const anyLive = all.some(([, m]) => m.live)
 
   const rows = useMemo<Row[]>(
-    () => [...rowsFor('ansem', ansem), ...rowsFor('bonk', bonk), ...rowsFor('wif', wif)]
-      .sort((a, b) => b.placedAt - a.placedAt),
-    [ansem, bonk, wif],
+    () => all.flatMap(([id, m]) => rowsFor(id, m)).sort((a, b) => b.placedAt - a.placedAt),
+    [ansem, bonk, wif, floki, babydoge, broccoli, zashArc, zashSeis],
   )
 
   const pending = rows.filter((r) => r.status === 'pending')

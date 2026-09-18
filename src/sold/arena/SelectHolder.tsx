@@ -72,7 +72,9 @@ export function SelectHolder({ holder, usdPrice, totalSupply, arenaId, onBack, o
           </div>
           <a
             className="arena-btn arena-btn-ghost arena-btn-block"
-            href={`https://solscan.io/account/${holder.wallet}`}
+            href={holder.wallet.startsWith('0x')
+              ? `https://bscscan.com/address/${holder.wallet}`
+              : `https://solscan.io/account/${holder.wallet}`}
             target="_blank" rel="noreferrer"
           >
             View on Explorer ↗

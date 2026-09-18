@@ -1,9 +1,9 @@
-/* Scene 1 — Enter Arena. Three arenas are real (see arenas.ts); others render
-   locked, never with fabricated live numbers. Each live arena needs its own
-   useMarkets() call — one shared call would leak ANSEM's numbers onto the
-   BONK/WIF tiles. The count is fixed and small, so three explicit calls
-   (rules of hooks forbid calling a hook in a loop) beats a generic system
-   for what's currently a three-item list. */
+/* Scene 1 — Enter Arena. Each potentially-live arena needs its own
+   useMarkets() call — one shared call would leak one arena's numbers onto
+   another's tile. Includes the still-locked BSC arenas too, so flipping
+   them live in arenas.ts later needs no further code change here. Rules of
+   hooks forbid calling a hook in a loop, so this is explicit rather than
+   generic — fine for a list this size. */
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSolana } from '../../wallet/SolanaContext'
@@ -43,11 +43,19 @@ export function ArenaHome() {
   const ansem = useMarkets(address, 'ansem')
   const bonk = useMarkets(address, 'bonk')
   const wif = useMarkets(address, 'wif')
-  const byArena: Record<string, UseMarketsReturn> = { ansem, bonk, wif }
+  const floki = useMarkets(address, 'floki')
+  const babydoge = useMarkets(address, 'babydoge')
+  const broccoli = useMarkets(address, 'broccoli')
+  const zashArc = useMarkets(address, 'zash-arc')
+  const zashSeis = useMarkets(address, 'zash-seis')
+  const byArena: Record<string, UseMarketsReturn> = {
+    ansem, bonk, wif, floki, babydoge, broccoli, 'zash-arc': zashArc, 'zash-seis': zashSeis,
+  }
+  const allMarkets = [ansem, bonk, wif, floki, babydoge, broccoli, zashArc, zashSeis]
 
   const myInPlay = useMemo(
-    () => inPlayOf(ansem) + inPlayOf(bonk) + inPlayOf(wif),
-    [ansem, bonk, wif],
+    () => allMarkets.reduce((s, m) => s + inPlayOf(m), 0),
+    [ansem, bonk, wif, floki, babydoge, broccoli, zashArc, zashSeis],
   )
 
   return (
