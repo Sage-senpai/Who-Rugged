@@ -109,6 +109,15 @@ export interface MagnitudePosition {
   placedAt: number
 }
 
+/** Where an arena's holders and live balances come from. The market records it
+    at open so its later balance sampling reads the right chain: sampling
+    always used the ANSEM mint on Solana, so every other arena's holders read
+    as zero balance and were locked as "sold everything" on the first sample. */
+export type ArenaSource =
+  | { kind: 'solana'; mint: string }
+  | { kind: 'bsc'; contract: string }
+  | { kind: 'zash'; projectId: string }
+
 export interface BucketHolderMarket {
   wallet: string
   handle: string

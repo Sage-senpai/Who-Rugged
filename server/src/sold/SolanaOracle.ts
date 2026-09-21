@@ -98,6 +98,30 @@ export class SolanaOracle {
     })
   }
 
+  /** Live balance per wallet for this mint, or null when the read itself failed.
+   *  Unlike fetchCurrentBalances there is no registry fallback: a failed read
+   *  must stay "unknown", because reading it as 0 looks like the wallet sold
+   *  everything. A wallet with no token account is a genuine 0. */
+  async fetchLiveBalances(wallets: string[]): Promise<Map<string, number | null>> {
+    const out = new Map<string, number | null>()
+    if (!this.mint) return out
+    type Accounts = { value: { account: { data: { parsed: { info: { tokenAmount: { uiAmount: number | null } } } } } }[] }
+    await Promise.all(
+      wallets.map(async (wallet) => {
+        const res = await this.rpcCall<Accounts>(wallet, 'getTokenAccountsByOwner', [
+          wallet,
+          { mint: this.mint },
+          { encoding: 'jsonParsed' },
+        ])
+        out.set(
+          wallet,
+          res == null ? null : res.value.reduce((s, a) => s + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0), 0),
+        )
+      }),
+    )
+    return out
+  }
+
   /** Real top holders for any SPL mint, straight from the chain — no curated
    *  wallet list needed. getTokenLargestAccounts caps at 20 token accounts;
    *  each is resolved to its owning wallet via getMultipleAccounts (one

@@ -14,7 +14,7 @@ import { BscOracle } from './sold/BscOracle'
 import { ZashClient } from './sold/ZashClient'
 import { TRACKED_WALLETS, lookupHolder } from './sold/holderRegistry'
 import { BucketMarket, type OpenHolder } from './sold/BucketMarket'
-import type { TrackedHolder, PredictionWindow, Prediction, Resolution, PredictorScore, RegisteredHolder, BatchWindow, BatchResult, BatchPrediction, BucketId, BinarySide, MagnitudeBand } from './sold/types'
+import type { ArenaSource, TrackedHolder, PredictionWindow, Prediction, Resolution, PredictorScore, RegisteredHolder, BatchWindow, BatchResult, BatchPrediction, BucketId, BinarySide, MagnitudeBand } from './sold/types'
 
 const ANSEM_MINT_DEFAULT = '9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump'
 
@@ -26,11 +26,6 @@ const ANSEM_MINT_DEFAULT = '9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump'
    project's own docs) 2026-09-18 — re-verify before trusting long-term,
    meme-coin mints do occasionally get relaunched under new tickers. Zash
    project ids come straight from GET https://zash.xyz/api/v1/projects. */
-type ArenaSource =
-  | { kind: 'solana'; mint: string }
-  | { kind: 'bsc'; contract: string }
-  | { kind: 'zash'; projectId: string }
-
 const ARENA_SOURCES: Record<string, ArenaSource> = {
   bonk: { kind: 'solana', mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263' },
   wif: { kind: 'solana', mint: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm' },
@@ -734,18 +729,12 @@ export default {
       const arenaSource: ArenaSource | null = arenaId === 'ansem' ? null : ARENA_SOURCES[arenaId]
       // Bucket-market id is namespaced per arena so each token gets its own
       // window; ANSEM keeps its original (unnamespaced) id unchanged.
-      // Per-arena version tags force a fresh Durable Object the first time an
-      // arena's data source actually works, after an earlier bad run (missing
-      // or broken API key) left it stuck empty+settled — ensureOpen() is
-      // idempotent, so without a version bump it would keep serving that
-      // stale empty state forever. Bumping is scoped to just the arena(s)
-      // that needed it so already-live arenas with real positions (bonk, wif,
-      // the zash ones) aren't reset. bonk/wif were v2, so global default
-      // stays v3; floki/babydoge/broccoli never had a working key until now,
-      // so they start at v4.
-      const ARENA_VERSION: Record<string, string> = { floki: 'v6', babydoge: 'v6', broccoli: 'v6' }
-      const marketVersion = ARENA_VERSION[arenaId] ?? 'v3'
-      const marketWid = arenaId === 'ansem' ? wid : `${arenaId}:${marketVersion}:${windowId(hours)}`
+      // The version tag forces fresh Durable Objects: ensureOpen() is
+      // idempotent, so a market opened while broken keeps its state for the
+      // whole window. v7 replaces every non-ANSEM market that was opened while
+      // the balance sampler read the wrong chain (all holders locked as sold).
+      const MARKET_VERSION = 'v7'
+      const marketWid = arenaId === 'ansem' ? wid : `${arenaId}:${MARKET_VERSION}:${windowId(hours)}`
 
       const toOpenHolder = ({ wallet, balance }: { wallet: string; balance: number }): OpenHolder => {
         const meta = lookupHolder(wallet)
@@ -794,7 +783,7 @@ export default {
         if (!state) {
           const ms = hours * 3_600_000
           const opensAt = Math.floor(Date.now() / ms) * ms
-          await market.ensureOpen(marketWid, await buildHoldersForArena(), opensAt, opensAt + ms)
+          await market.ensureOpen(marketWid, await buildHoldersForArena(), opensAt, opensAt + ms, arenaSource ?? undefined)
           state = await market.getMarket() // re-read so realPools is always present
         }
         return json(state)

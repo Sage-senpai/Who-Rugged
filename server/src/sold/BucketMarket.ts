@@ -19,7 +19,10 @@
    PredictionPool / batch settlement. */
 import { DurableObject } from 'cloudflare:workers'
 import { SolanaOracle } from './SolanaOracle'
+import { BscOracle } from './BscOracle'
+import { ZashClient } from './ZashClient'
 import type {
+  ArenaSource,
   BucketId,
   BucketPools,
   BucketHolderMarket,
@@ -164,6 +167,8 @@ interface MarketState {
   closesAt: number
   status: 'open' | 'resolving' | 'settled'
   holders: BucketHolderMarket[]
+  /** Balance source for non-ANSEM arenas. Absent = the original ANSEM path. */
+  source?: ArenaSource
 }
 
 export class BucketMarket extends DurableObject<BucketEnv> {
@@ -185,7 +190,13 @@ export class BucketMarket extends DurableObject<BucketEnv> {
   }
 
   /** Idempotently open the market for this window and schedule sampling. */
-  async ensureOpen(windowId: string, holders: OpenHolder[], opensAt: number, closesAt: number): Promise<MarketState> {
+  async ensureOpen(
+    windowId: string,
+    holders: OpenHolder[],
+    opensAt: number,
+    closesAt: number,
+    source?: ArenaSource,
+  ): Promise<MarketState> {
     const existing = await this.state()
     if (existing) return existing
     const state: MarketState = {
@@ -193,6 +204,7 @@ export class BucketMarket extends DurableObject<BucketEnv> {
       opensAt,
       closesAt,
       status: 'open',
+      source,
       holders: holders.map((h) => ({
         wallet: h.wallet,
         handle: h.handle,
@@ -341,19 +353,32 @@ export class BucketMarket extends DurableObject<BucketEnv> {
   }
 
   /** Sample balances; lock any holder whose balance has dropped past threshold. */
+  private async liveBalances(state: MarketState, wallets: string[]): Promise<Map<string, number | null>> {
+    const src = state.source
+    if (!src) {
+      // Original ANSEM path, unchanged (curated registry with snapshot fallback).
+      const oracle = new SolanaOracle(this.env.ALCHEMY_API_KEY, this.env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
+      const rows = await oracle.fetchCurrentBalances(wallets)
+      return new Map(rows.map((r) => [r.wallet, r.balance]))
+    }
+    if (src.kind === 'solana') return new SolanaOracle(this.env.ALCHEMY_API_KEY, src.mint).fetchLiveBalances(wallets)
+    if (src.kind === 'bsc') return new BscOracle(undefined).fetchBalances(src.contract, wallets)
+    return new ZashClient().fetchBalances(src.projectId, wallets)
+  }
+
   private async sample(state: MarketState, elapsedHours: number): Promise<void> {
-    const oracle = new SolanaOracle(this.env.ALCHEMY_API_KEY, this.env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
     const threshold = parseFloat(this.env.SOLD_SELL_THRESHOLD ?? String(SELL_THRESHOLD_DEFAULT))
     const pending = state.holders.filter((h) => h.resolvedBucket == null)
     if (pending.length === 0) return
-    const balances = await oracle.fetchCurrentBalances(pending.map((h) => h.wallet))
+    const balances = await this.liveBalances(state, pending.map((h) => h.wallet))
     for (const h of pending) {
-      const bal = balances.find((b) => b.wallet === h.wallet)
-      if (!bal) continue
-      h.balanceNow = bal.balance
+      const now = balances.get(h.wallet)
+      // Unknown (failed read) is skipped, never treated as a zero balance.
+      if (now == null) continue
+      h.balanceNow = now
       const before = h.balanceAtSnapshot
-      h.dropRatio = before > 0 ? Math.max(0, (before - bal.balance) / before) : 0
-      if (before > 0 && (before - bal.balance) / before > threshold) {
+      h.dropRatio = before > 0 ? Math.max(0, (before - now) / before) : 0
+      if (before > 0 && (before - now) / before > threshold) {
         // locks the holder: bet() now rejects, killing the front-run window
         h.resolvedBucket = bucketForElapsed(elapsedHours)
       }

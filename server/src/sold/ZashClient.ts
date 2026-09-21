@@ -56,6 +56,21 @@ export class ZashClient {
     }
   }
 
+  /** Live balance per wallet from Zash's holder list (top 100). A wallet that
+   *  has dropped out of a non-empty list has sold down past the top 100, so it
+   *  reads 0; an empty or failed response means "unknown" (null), never 0. */
+  async fetchBalances(projectId: string, wallets: string[]): Promise<Map<string, number | null>> {
+    const out = new Map<string, number | null>()
+    const rows = await this.fetchTopHolders(projectId, 100)
+    if (rows.length === 0) {
+      wallets.forEach((w) => out.set(w, null))
+      return out
+    }
+    const byWallet = new Map(rows.map((r) => [r.wallet.toLowerCase(), r.balance]))
+    wallets.forEach((w) => out.set(w, byWallet.get(w.toLowerCase()) ?? 0))
+    return out
+  }
+
   /** Current USD price straight from Zash's own project record — free,
    *  already fetched as part of holder discovery, no separate price feed
    *  needed for this arena type. */
