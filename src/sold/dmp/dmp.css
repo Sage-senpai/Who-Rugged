@@ -1,0 +1,138 @@
+/* The Read screen. Lives inside .arena-shell so it inherits the --ar-* tokens;
+   only the two extra signal hues are defined here. MODEL, MARKET and YOU must
+   stay visibly distinct (handoff doc, section 9), and each is also labeled in
+   text so color is never the only cue. */
+.dmp {
+  --dmp-market: oklch(74% 0.11 235);
+  --dmp-market-dim: oklch(74% 0.11 235 / 0.14);
+  --dmp-model: oklch(74% 0.13 305);
+  --dmp-model-dim: oklch(74% 0.13 305 / 0.14);
+}
+
+.dmp-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+.dmp-q { font-size: 26px; font-weight: 800; letter-spacing: -0.3px; line-height: 1.2; margin: 0; max-width: 34ch; text-wrap: balance; }
+
+.dmp-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 20px; align-items: start; }
+.dmp-col { min-width: 0; }
+
+/* evidence column */
+.dmp-profile { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+.dmp-profile-id { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.dmp-addr { overflow-wrap: anywhere; }
+.dmp-link { font-size: 12px; font-weight: 700; color: var(--ar-text-dim); text-decoration: underline; text-underline-offset: 3px; }
+.dmp-link:hover { color: var(--ar-accent); }
+.dmp-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.dmp-stats-4 { grid-template-columns: repeat(4, 1fr); }
+.dmp-stat-val { font-family: var(--ar-mono); font-size: 18px; font-weight: 800; margin-top: 4px; }
+.dmp-stat-sm { font-size: 13px; padding-top: 3px; }
+
+.dmp-dna { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 24px; margin: 0; }
+.dmp-dna dt { font-size: 10px; font-weight: 700; letter-spacing: 0.4px; color: var(--ar-text-faint); text-transform: uppercase; }
+.dmp-dna dd { margin: 4px 0 0; font-size: 14px; font-weight: 700; }
+.dmp-dim { color: var(--ar-text-faint); font-weight: 500 !important; font-size: 12px !important; }
+
+.dmp-fine { font-size: 11px; line-height: 1.5; color: var(--ar-text-faint); margin: 12px 0 0; max-width: 62ch; }
+
+/* your read */
+.dmp-ask { font-size: 15px; font-weight: 700; margin: 0 0 14px; }
+.dmp-dial-read { display: flex; align-items: baseline; gap: 12px; }
+.dmp-dial-num { font-family: var(--ar-mono); font-size: 48px; font-weight: 800; line-height: 1; letter-spacing: -1.5px; }
+.dmp-unset { color: var(--ar-text-faint); }
+.dmp-dial-side { font-size: 12px; font-weight: 800; letter-spacing: 1.2px; color: var(--ar-text-faint); }
+.dmp-dial-side.is-sell { color: var(--ar-negative); }
+.dmp-dial-side.is-hold { color: var(--ar-positive); }
+
+.dmp-range {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 32px; margin: 12px 0 6px;
+  background: transparent; cursor: pointer;
+}
+.dmp-range:disabled { cursor: not-allowed; opacity: 0.5; }
+.dmp-range::-webkit-slider-runnable-track {
+  height: 8px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--ar-negative) var(--p), var(--ar-positive) var(--p));
+}
+.dmp-range::-moz-range-track {
+  height: 8px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--ar-negative) var(--p), var(--ar-positive) var(--p));
+}
+.dmp-range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 24px; height: 24px; margin-top: -8px; border-radius: 50%;
+  background: var(--ar-text); border: 4px solid var(--ar-bg); box-shadow: 0 0 0 1px var(--ar-border);
+}
+.dmp-range::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%; background: var(--ar-text);
+  border: 4px solid var(--ar-bg); box-shadow: 0 0 0 1px var(--ar-border);
+}
+.dmp-range:focus-visible { outline: 2px solid var(--ar-accent); outline-offset: 4px; border-radius: 6px; }
+
+.dmp-split { display: flex; height: 26px; border-radius: 6px; overflow: hidden; font-size: 11px; font-weight: 800; letter-spacing: 0.4px; }
+.dmp-split span { display: flex; align-items: center; padding: 0 10px; white-space: nowrap; overflow: hidden; }
+.dmp-split-sell { background: var(--ar-negative-dim); color: var(--ar-negative); }
+.dmp-split-hold { background: var(--ar-positive-dim); color: var(--ar-positive); justify-content: flex-end; }
+
+/* signals */
+.dmp-triad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dmp-sig {
+  display: flex; flex-direction: column; gap: 2px; padding: 12px;
+  background: var(--ar-surface-2); border: 1px solid var(--ar-border); border-radius: var(--ar-radius-sm);
+}
+.dmp-sig-sealed { border-style: dashed; background: transparent; }
+.dmp-sig-lab { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.8px; color: var(--c); }
+.dmp-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c); flex-shrink: 0; }
+.dmp-sig-val { font-family: var(--ar-mono); font-size: 22px; font-weight: 800; margin-top: 6px; }
+.dmp-sig-sealed .dmp-sig-val { font-size: 15px; padding: 4px 0; color: var(--ar-text-dim); }
+.dmp-sig-sub { font-size: 11px; color: var(--ar-text-faint); }
+
+.dmp-sealed { margin-top: 14px; padding: 14px; border: 1px dashed var(--ar-border); border-radius: var(--ar-radius-sm); }
+.dmp-sealed p { margin: 0 0 12px; font-size: 12px; line-height: 1.5; color: var(--ar-text-dim); }
+
+.dmp-model { margin-top: 14px; }
+.dmp-final { padding: 14px; background: var(--ar-surface-2); border-radius: var(--ar-radius-sm); margin-bottom: 16px; }
+.dmp-final-top { display: flex; align-items: baseline; justify-content: space-between; }
+.dmp-final-lab { font-size: 10px; font-weight: 800; letter-spacing: 0.8px; color: var(--ar-text-faint); }
+.dmp-final-val { font-family: var(--ar-mono); font-size: 28px; font-weight: 800; }
+.dmp-final-val small { font-family: var(--ar-font); font-size: 12px; font-weight: 700; color: var(--ar-text-faint); }
+.dmp-weights { display: flex; height: 6px; border-radius: 999px; overflow: hidden; margin: 10px 0 0; background: var(--ar-surface-3); }
+.dmp-w-model { background: var(--dmp-model); transition: width 0.2s ease-out; }
+.dmp-w-pool { background: var(--dmp-market); transition: width 0.2s ease-out; }
+.dmp-delta { font-size: 12px; font-weight: 600; margin: 8px 0 0; color: var(--ar-text); }
+
+.dmp-sub-title { font-size: 10px; font-weight: 800; letter-spacing: 0.8px; color: var(--ar-text-faint); margin: 0 0 8px; }
+.dmp-signals { list-style: none; margin: 0; padding: 0; }
+.dmp-signals li { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--ar-border); }
+.dmp-signals li:last-child { border-bottom: none; }
+.dmp-arrow { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0; }
+.dmp-arrow.sell { background: var(--ar-negative-dim); color: var(--ar-negative); }
+.dmp-arrow.hold { background: var(--ar-positive-dim); color: var(--ar-positive); }
+.dmp-sig-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.dmp-sig-name { font-size: 13px; font-weight: 700; }
+.dmp-sig-detail { font-size: 11px; color: var(--ar-text-faint); line-height: 1.4; }
+.dmp-strength { font-size: 10px; font-weight: 700; color: var(--ar-text-dim); white-space: nowrap; padding-top: 3px; }
+
+.dmp-pools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--ar-border); }
+.dmp-pool-val { font-family: var(--ar-mono); font-size: 16px; font-weight: 800; margin-top: 4px; }
+
+/* actions */
+.dmp-actions { display: flex; flex-direction: column; gap: 10px; }
+.dmp-hint { margin: 0; font-size: 12px; color: var(--ar-text-dim); text-align: center; }
+.dmp-classic {
+  background: none; border: none; padding: 8px; font-size: 12px; font-weight: 600; color: var(--ar-text-faint);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.dmp-classic:hover { color: var(--ar-text); }
+
+@media (max-width: 860px) {
+  .dmp-grid { grid-template-columns: 1fr; }
+  .dmp-head { flex-direction: column; }
+  .dmp-head .arena-timer { align-items: flex-start; }
+  .dmp-q { font-size: 22px; max-width: none; }
+  .dmp-stats-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .dmp-dna { grid-template-columns: 1fr; }
+  .dmp-sig-val { font-size: 18px; }
+  .dmp-strength { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dmp-w-model, .dmp-w-pool { transition: none; }
+}

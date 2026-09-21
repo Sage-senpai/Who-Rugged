@@ -1,4 +1,4 @@
-export type ArenaScene = 'scan' | 'holder' | 'marketType' | 'predict' | 'review' | 'locked'
+export type ArenaScene = 'scan' | 'holder' | 'thesis' | 'marketType' | 'predict' | 'review' | 'locked'
 
 export type MarketKind = 'binary' | 'magnitude'
 

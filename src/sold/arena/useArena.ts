@@ -10,6 +10,8 @@ import type { BinarySide } from '../market/binary'
 import type { MagnitudeBand } from '../market/magnitude'
 import { arenaById } from './arenas'
 import type { ArenaScene, MarketKind } from './arenaTypes'
+import { sideForProbability, type ReadDraft } from '../dmp/dmp'
+import { saveRead } from '../dmp/readStore'
 
 export type Outcome = { kind: 'binary'; side: BinarySide } | { kind: 'magnitude'; band: MagnitudeBand }
 
@@ -40,21 +42,41 @@ export function useArena(arenaId: string | undefined) {
   const [committed, setCommitted] = useState(false)
   const [committing, setCommitting] = useState(false)
   const [commitError, setCommitError] = useState<string | null>(null)
+  // Set only when the player came through the Read screen; the classic
+  // marketType/predict path leaves it null so Review looks exactly as before.
+  const [read, setRead] = useState<ReadDraft | null>(null)
 
   const selectHolder = useCallback((h: HolderMarket) => {
     setHolder(h)
     setMarketKind(null)
     setOutcome(null)
+    setRead(null)
     setCommitted(false)
     setScene('holder')
   }, [])
+
+  const openThesis = useCallback(() => setScene('thesis'), [])
 
   const openMarketTypePicker = useCallback(() => setScene('marketType'), [])
 
   const selectMarketType = useCallback((kind: MarketKind) => {
     setMarketKind(kind)
     setOutcome(null)
+    setRead(null)
     setScene('predict')
+  }, [])
+
+  // The Read screen resolves to the same (binary side, stake) the classic
+  // screens produce, then joins the existing Review & Commit unchanged.
+  const submitRead = useCallback((draft: ReadDraft) => {
+    const side = sideForProbability(draft.probYes * 100)
+    if (!side) return
+    setRead(draft)
+    setMarketKind('binary')
+    setOutcome({ kind: 'binary', side })
+    setStake(draft.stake)
+    setCommitError(null)
+    setScene('review')
   }, [])
 
   const selectOutcome = useCallback((o: Outcome, s: number) => {
@@ -68,12 +90,13 @@ export function useArena(arenaId: string | undefined) {
     setCommitError(null)
     setScene((s) => {
       if (s === 'holder') return 'scan'
-      if (s === 'marketType') return 'holder'
+      if (s === 'thesis') return 'holder'
+      if (s === 'marketType') return 'thesis'
       if (s === 'predict') return 'marketType'
-      if (s === 'review') return 'predict'
+      if (s === 'review') return read ? 'thesis' : 'predict'
       return s
     })
-  }, [])
+  }, [read])
 
   const commit = useCallback(async () => {
     if (!holder || !outcome) return
@@ -87,14 +110,25 @@ export function useArena(arenaId: string | undefined) {
       setCommitError(commitErrorMessage(res.error))
       return
     }
+    if (read && outcome.kind === 'binary' && arena) {
+      saveRead({
+        ...read,
+        arenaId: arena.id,
+        windowId: markets.windowId,
+        wallet: holder.wallet,
+        side: outcome.side,
+        committedAt: Date.now(),
+      })
+    }
     setCommitted(true)
     setScene('locked')
-  }, [holder, outcome, stake, markets])
+  }, [holder, outcome, stake, markets, read, arena])
 
   const reset = useCallback(() => {
     setHolder(null)
     setMarketKind(null)
     setOutcome(null)
+    setRead(null)
     setCommitted(false)
     setCommitError(null)
     setScene('scan')
@@ -112,16 +146,19 @@ export function useArena(arenaId: string | undefined) {
       committed,
       committing,
       commitError,
+      read,
       markets,
       selectHolder,
+      openThesis,
       openMarketTypePicker,
       selectMarketType,
       selectOutcome,
+      submitRead,
       back,
       commit,
       reset,
     }),
-    [arena, isLive, scene, holder, marketKind, outcome, stake, committed, committing, commitError, markets,
-      selectHolder, openMarketTypePicker, selectMarketType, selectOutcome, back, commit, reset],
+    [arena, isLive, scene, holder, marketKind, outcome, stake, committed, committing, commitError, read, markets,
+      selectHolder, openThesis, openMarketTypePicker, selectMarketType, selectOutcome, submitRead, back, commit, reset],
   )
 }

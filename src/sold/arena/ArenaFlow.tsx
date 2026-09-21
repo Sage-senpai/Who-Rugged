@@ -10,6 +10,7 @@ import { PredictBinary } from './PredictBinary'
 import { PredictMagnitude } from './PredictMagnitude'
 import { ReviewCommit } from './ReviewCommit'
 import { ComingSoon } from './ComingSoon'
+import { Thesis } from '../dmp/Thesis'
 import './arena.css'
 
 export function ArenaFlow() {
@@ -64,7 +65,17 @@ export function ArenaFlow() {
         {a.scene === 'scan' && <ScanHolders arena={a.arena} markets={a.markets} usdPrice={usdPrice} onSelect={a.selectHolder} />}
         {a.scene === 'holder' && a.holder && (
           <SelectHolder holder={a.holder} usdPrice={usdPrice} totalSupply={a.arena.totalSupply} arenaId={a.arena.id}
-            onBack={a.back} onPredict={a.openMarketTypePicker} />
+            onBack={a.back} onPredict={a.openThesis} />
+        )}
+        {a.scene === 'thesis' && a.holder && (
+          <Thesis
+            holder={a.markets.markets.find((m) => m.wallet === a.holder!.wallet) ?? a.holder}
+            arena={a.arena}
+            usdPrice={usdPrice}
+            onBack={a.back}
+            onClassic={a.openMarketTypePicker}
+            onContinue={a.submitRead}
+          />
         )}
         {a.scene === 'marketType' && a.holder && (
           <SelectMarketType holder={a.holder} onBack={a.back} onSelect={a.selectMarketType} />
@@ -77,7 +88,8 @@ export function ArenaFlow() {
         )}
         {a.scene === 'review' && a.holder && a.outcome && (
           <ReviewCommit holder={a.holder} marketKind={a.marketKind!} outcome={a.outcome} stake={a.stake}
-            committing={a.committing} commitError={a.commitError} onBack={a.back} onCommit={a.commit} />
+            committing={a.committing} commitError={a.commitError} readProbYes={a.read?.probYes}
+            onBack={a.back} onCommit={a.commit} />
         )}
         {a.scene === 'locked' && <ComingSoon onDone={a.reset} />}
       </div>

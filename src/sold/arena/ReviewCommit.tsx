@@ -14,11 +14,13 @@ interface Props {
   stake: number
   committing: boolean
   commitError: string | null
+  /** Set when the player set a probability on the Read screen. */
+  readProbYes?: number
   onBack: () => void
   onCommit: () => void
 }
 
-export function ReviewCommit({ holder, marketKind, outcome, stake, committing, commitError, onBack, onCommit }: Props) {
+export function ReviewCommit({ holder, marketKind, outcome, stake, committing, commitError, readProbYes, onBack, onCommit }: Props) {
   const countdown = useCountdown(holder.closesAt)
   const closed = countdown === 'CLOSED'
 
@@ -61,6 +63,14 @@ export function ReviewCommit({ holder, marketKind, outcome, stake, committing, c
           <span className="arena-review-lab">PREDICTION</span>
           <span className="arena-review-val">{predictionLabel}</span>
         </div>
+        {readProbYes != null && (
+          <div className="arena-review-row">
+            <span className="arena-review-lab">YOUR READ</span>
+            <span className="arena-review-val">
+              SELL {Math.round(readProbYes * 100)}% · HOLD {Math.round((1 - readProbYes) * 100)}%
+            </span>
+          </div>
+        )}
         <div className="arena-review-row">
           <span className="arena-review-lab">STAKE</span>
           <span className="arena-review-val">{stake} {BET_TOKEN}</span>
