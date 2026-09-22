@@ -798,11 +798,11 @@ export default {
       }
 
       if (url.pathname === '/sold/market/bet-binary' && request.method === 'POST') {
-        let b: { predictor?: string; wallet?: string; side?: string; stake?: number }
+        let b: { predictor?: string; wallet?: string; side?: string; stake?: number; probabilityYes?: number }
         try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
         if (!b.predictor || !b.wallet || !b.side) return json({ error: 'missing-fields' }, 400)
         const market = env.BUCKET_MARKET.getByName(marketWid)
-        return json(await market.betBinary(b.predictor, b.wallet, b.side as BinarySide, b.stake ?? 50))
+        return json(await market.betBinary(b.predictor, b.wallet, b.side as BinarySide, b.stake ?? 50, b.probabilityYes))
       }
 
       if (url.pathname === '/sold/market/bet-magnitude' && request.method === 'POST') {

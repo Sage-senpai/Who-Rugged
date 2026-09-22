@@ -65,6 +65,14 @@ export function payoutMultiple(pools: BinaryPools | undefined, side: BinarySide,
 
 export const pct = (p: number): string => `${Math.round(p * 100)}%`
 
+/** Your probability minus the market's, in the exact framing from the pilot
+    doc: "the foundation of the game" is asking whether your belief differs
+    enough from the market's, not just which side you lean. Null before any
+    real stakes exist — there's no market to have an edge against yet. */
+export function edgeVsMarket(probYes: number, marketP: number | null): number | null {
+  return marketP == null ? null : probYes - marketP
+}
+
 /** What the player locked in on the Read screen, carried into Review & Commit
     and stored once the bet actually lands. */
 export interface ReadDraft {

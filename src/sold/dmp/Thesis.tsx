@@ -15,7 +15,7 @@ import type { HolderMarket } from '../market/marketTypes'
 import type { ArenaDef } from '../arena/arenaTypes'
 import { useCountdown } from '../arena/useCountdown'
 import {
-  QUALIFYING_SELL_PCT, STAKE_PRESETS, blendedOdds, marketProbability, payoutMultiple, pct,
+  QUALIFYING_SELL_PCT, STAKE_PRESETS, blendedOdds, edgeVsMarket, marketProbability, payoutMultiple, pct,
   sideForProbability, type ReadDraft,
 } from './dmp'
 import { BASE_RATE, buildWalletModel, confidenceLabel } from './walletModel'
@@ -77,6 +77,7 @@ export function Thesis({ holder, arena, usdPrice, onBack, onClassic, onContinue 
   const poolTotal = pools.yes + pools.no
   const marketP = marketProbability(pools)
   const blend = blendedOdds(model.pYes, model.confidence, pools)
+  const edge = touched ? edgeVsMarket(prob / 100, marketP) : null
   const side = sideForProbability(prob)
   const multiple = side ? payoutMultiple(pools, side, stake) : null
 
@@ -261,6 +262,32 @@ export function Thesis({ holder, arena, usdPrice, onBack, onClassic, onContinue 
               <span className="dmp-split-sell" style={{ width: `${prob}%` }}>SELL {prob}%</span>
               <span className="dmp-split-hold" style={{ width: `${100 - prob}%` }}>HOLD {100 - prob}%</span>
             </div>
+
+            <div className="dmp-edge-row">
+              <div className="dmp-edge-cell">
+                <span className="arena-stat-lab">MARKET</span>
+                <span className="dmp-edge-val">{marketP != null ? pct(marketP) : 'No stakes yet'}</span>
+              </div>
+              <span className="dmp-edge-op">−</span>
+              <div className="dmp-edge-cell">
+                <span className="arena-stat-lab">YOU</span>
+                <span className="dmp-edge-val">{touched ? pct(prob / 100) : 'n/a'}</span>
+              </div>
+              <span className="dmp-edge-op">=</span>
+              <div className="dmp-edge-cell dmp-edge-result">
+                <span className="arena-stat-lab">YOUR EDGE</span>
+                <span className={`dmp-edge-val dmp-edge-big${edge != null && edge < 0 ? ' is-neg' : edge != null && edge > 0 ? ' is-pos' : ''}`}>
+                  {edge == null ? 'n/a' : `${edge >= 0 ? '+' : ''}${Math.round(edge * 100)}%`}
+                </span>
+              </div>
+            </div>
+            {edge != null && (
+              <p className="dmp-fine">
+                {Math.abs(edge) < 0.05
+                  ? "Your read is close to the market's — a thin edge, if any."
+                  : `You think ${side === 'yes' ? 'SELL' : 'HOLD'} is more likely than the market does. That gap is your edge, not just which side you picked.`}
+              </p>
+            )}
 
             <div className="arena-stake-row">
               <span className="arena-stake-lab">STAKE</span>

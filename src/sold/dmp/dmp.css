@@ -70,6 +70,18 @@
 .dmp-split-sell { background: var(--ar-negative-dim); color: var(--ar-negative); }
 .dmp-split-hold { background: var(--ar-positive-dim); color: var(--ar-positive); justify-content: flex-end; }
 
+.dmp-edge-row {
+  display: flex; align-items: center; gap: 10px; margin: 14px 0 4px; padding: 12px;
+  background: var(--ar-surface-2); border-radius: var(--ar-radius-sm);
+}
+.dmp-edge-cell { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.dmp-edge-result { flex: 1.2; }
+.dmp-edge-op { font-size: 16px; font-weight: 800; color: var(--ar-text-faint); flex-shrink: 0; }
+.dmp-edge-val { font-family: var(--ar-mono); font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dmp-edge-big { font-size: 20px; }
+.dmp-edge-big.is-pos { color: var(--ar-positive); }
+.dmp-edge-big.is-neg { color: var(--ar-negative); }
+
 /* signals */
 .dmp-triad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .dmp-sig {

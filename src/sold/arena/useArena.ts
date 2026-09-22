@@ -103,7 +103,7 @@ export function useArena(arenaId: string | undefined) {
     setCommitting(true)
     setCommitError(null)
     const res = outcome.kind === 'binary'
-      ? await markets.placeBinary(holder.wallet, outcome.side, stake)
+      ? await markets.placeBinary(holder.wallet, outcome.side, stake, read?.probYes)
       : await markets.placeMagnitude(holder.wallet, outcome.band, stake)
     setCommitting(false)
     if (!res.ok) {

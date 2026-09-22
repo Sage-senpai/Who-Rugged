@@ -94,6 +94,11 @@ export interface BinaryPosition {
   stake: number
   predictor: string
   placedAt: number
+  /** The player's own stated P(sell), from the Read screen. Absent for bets
+      placed through the classic (no-Read) predict screen. Kept separately
+      from side/stake so a resolution screen can score calibration (Brier)
+      later without conflating "what you bet" with "what you believed". */
+  probabilityYes?: number
 }
 
 // ── magnitude market — "how much of their position will they rug?" ──────────

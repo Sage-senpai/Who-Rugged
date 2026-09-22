@@ -21,6 +21,7 @@ import { DurableObject } from 'cloudflare:workers'
 import { SolanaOracle } from './SolanaOracle'
 import { BscOracle } from './BscOracle'
 import { ZashClient } from './ZashClient'
+import { scoreWallet, summarizeArena, type ArenaAnalytics } from './walletAnalytics'
 import type {
   ArenaSource,
   BucketId,
@@ -169,6 +170,9 @@ interface MarketState {
   holders: BucketHolderMarket[]
   /** Balance source for non-ANSEM arenas. Absent = the original ANSEM path. */
   source?: ArenaSource
+  /** Cached "i" icon signal (server/src/sold/walletAnalytics.ts). Only
+      computed for Solana-sourced arenas — see computeAnalytics(). */
+  analytics?: ArenaAnalytics
 }
 
 export class BucketMarket extends DurableObject<BucketEnv> {
@@ -284,10 +288,19 @@ export class BucketMarket extends DurableObject<BucketEnv> {
     return predictor ? positions.filter((p) => p.predictor === predictor) : positions
   }
 
-  async betBinary(predictor: string, wallet: string, side: BinarySide, stake: number): Promise<{ ok: boolean; error?: string }> {
+  async betBinary(
+    predictor: string,
+    wallet: string,
+    side: BinarySide,
+    stake: number,
+    probabilityYes?: number,
+  ): Promise<{ ok: boolean; error?: string }> {
     if (!predictor) return { ok: false, error: 'not-connected' }
     if (!BINARY_SIDES.includes(side)) return { ok: false, error: 'bad-side' }
     if (!(stake > 0)) return { ok: false, error: 'bad-stake' }
+    if (probabilityYes != null && !(probabilityYes >= 0 && probabilityYes <= 1)) {
+      return { ok: false, error: 'bad-probability' }
+    }
     const state = await this.state()
     if (!state || state.status !== 'open') return { ok: false, error: 'market-not-open' }
     const holder = state.holders.find((h) => h.wallet === wallet)
@@ -304,7 +317,7 @@ export class BucketMarket extends DurableObject<BucketEnv> {
       positions.splice(prevIdx, 1)
     }
     holder.binaryPools[side] += stake
-    positions.push({ wallet, side, stake, predictor, placedAt: Date.now() })
+    positions.push({ wallet, side, stake, predictor, placedAt: Date.now(), probabilityYes })
 
     await this.ctx.storage.put('market', state)
     await this.ctx.storage.put('binaryPositions', positions)
@@ -364,6 +377,33 @@ export class BucketMarket extends DurableObject<BucketEnv> {
     if (src.kind === 'solana') return new SolanaOracle(this.env.ALCHEMY_API_KEY, src.mint).fetchLiveBalances(wallets)
     if (src.kind === 'bsc') return new BscOracle(undefined).fetchBalances(src.contract, wallets)
     return new ZashClient().fetchBalances(src.projectId, wallets)
+  }
+
+  /** How often to recompute the "i" icon signal. Wallet-history reads are
+      heavy (a getSignaturesForAddress + up to N getParsedTransaction calls
+      per wallet), so this is far coarser than the balance sample interval —
+      that one's cheap (one RPC call per wallet), this one isn't. */
+  private static readonly ANALYTICS_REFRESH_MS = 20 * 60_000
+
+  /** Only Solana arenas can be scored right now — SolanaOracle is the only
+      oracle with a transfer-history read; BscOracle/ZashClient have none.
+      Honest gap, not a bug: those arenas simply carry no `analytics` field,
+      and the frontend says so rather than showing a fabricated number. */
+  private async maybeRefreshAnalytics(state: MarketState): Promise<void> {
+    const src = state.source
+    if (src && src.kind !== 'solana') return
+    if (Date.now() - (state.analytics?.computedAt ?? 0) < BucketMarket.ANALYTICS_REFRESH_MS) return
+
+    const mint = src?.kind === 'solana' ? src.mint : (this.env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
+    const oracle = new SolanaOracle(this.env.ALCHEMY_API_KEY, mint)
+    const pending = state.holders.filter((h) => h.resolvedBucket == null)
+    const scores = await Promise.all(
+      pending.map(async (h) => {
+        const activity = await oracle.fetchRecentActivity(h.wallet, 10)
+        return { ...scoreWallet(h.wallet, activity, h.balanceAtSnapshot, h.balanceNow, state.opensAt, state.closesAt), handle: h.handle }
+      }),
+    )
+    state.analytics = summarizeArena(scores)
   }
 
   private async sample(state: MarketState, elapsedHours: number): Promise<void> {
@@ -466,6 +506,7 @@ export class BucketMarket extends DurableObject<BucketEnv> {
     const now = Date.now()
     const elapsedHours = (now - state.opensAt) / HOUR
     await this.sample(state, elapsedHours)
+    await this.maybeRefreshAnalytics(state)
 
     const stillPending = state.holders.some((h) => h.resolvedBucket == null)
     if (now >= state.closesAt || !stillPending) {

@@ -73,12 +73,24 @@ export const placePrediction = (
 
 // ── time-bucket markets ─────────────────────────────────────────────────────────
 
+/** Mirrors server/src/sold/walletAnalytics.ts's ArenaAnalytics. Only present
+ *  for Solana-sourced arenas — see BucketMarket.maybeRefreshAnalytics. */
+export interface ArenaAnalytics {
+  computedAt: number
+  topPYes: number | null
+  topWallet: string | null
+  topHandle: string | null
+  scored: number
+  total: number
+}
+
 export interface ServerMarkets {
   windowId: string
   opensAt: number
   closesAt: number
   status: 'open' | 'resolving' | 'settled'
   holders: HolderMarket[]
+  analytics?: ArenaAnalytics
 }
 
 export const getMarkets = (arena?: string) => get<ServerMarkets | null>(withArena('/sold/markets', arena), null)
@@ -90,10 +102,12 @@ export const betBucket = (wallet: string, predictor: string, bucket: BucketId, s
     { ok: false, error: 'not-configured' },
   )
 
-export const betBinary = (wallet: string, predictor: string, side: BinarySide, stake: number, arena?: string) =>
+export const betBinary = (
+  wallet: string, predictor: string, side: BinarySide, stake: number, arena?: string, probabilityYes?: number,
+) =>
   post<{ ok: boolean; error?: string }>(
     withArena('/sold/market/bet-binary', arena),
-    { wallet, predictor, side, stake },
+    { wallet, predictor, side, stake, probabilityYes },
     { ok: false, error: 'not-configured' },
   )
 

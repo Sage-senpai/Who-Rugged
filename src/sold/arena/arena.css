@@ -124,6 +124,23 @@
   width: 40px; height: 40px; border-radius: 10px; background: var(--ar-surface-2);
   display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800;
 }
+.arena-info { position: relative; }
+.arena-info-btn {
+  width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--ar-border); background: var(--ar-surface-2);
+  color: var(--ar-text-faint); font-size: 11px; font-weight: 800; font-style: italic; font-family: Georgia, serif;
+  display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0;
+}
+.arena-info-btn:hover { color: var(--ar-accent); border-color: var(--ar-accent); }
+.arena-info-pop {
+  position: absolute; z-index: 5; top: 26px; right: 0; width: 260px; padding: 14px;
+  background: var(--ar-surface-2); border: 1px solid var(--ar-border); border-radius: var(--ar-radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); font-size: 12px; line-height: 1.5; text-align: left;
+}
+.arena-info-pop p { margin: 0 0 8px; }
+.arena-info-pop p:last-child { margin-bottom: 0; }
+.arena-info-title { font-size: 10px; font-weight: 800; letter-spacing: 0.8px; color: var(--dmp-model, var(--ar-accent)); }
+.arena-info-fine { color: var(--ar-text-faint); font-size: 11px; }
+
 .arena-tile-name { font-size: 16px; font-weight: 800; margin: 0; }
 .arena-tile-ticker { font-size: 11px; color: var(--ar-text-faint); font-family: var(--ar-mono); }
 .arena-tile-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

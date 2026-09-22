@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   getMarkets, betBucket, getMarketPositions, betBinary, getBinaryPositions,
-  betMagnitude, getMagnitudePositions,
+  betMagnitude, getMagnitudePositions, type ArenaAnalytics,
 } from '../soldClient'
 import type { BucketId } from './buckets'
 import type { BinarySide } from './binary'
@@ -34,8 +34,12 @@ export interface UseMarketsReturn {
   loading: boolean
   /** true when pools are shared/server-backed, false when local-only. */
   live: boolean
+  /** The "i" icon signal, when the backend has one for this arena — see
+      server/src/sold/walletAnalytics.ts. Undefined (not just loading) means
+      this arena's data source can't be scored yet, not that it failed. */
+  analytics?: ArenaAnalytics
   place: (wallet: string, bucket: BucketId, stake?: number) => Promise<PlaceResult>
-  placeBinary: (wallet: string, side: BinarySide, stake?: number) => Promise<PlaceResult>
+  placeBinary: (wallet: string, side: BinarySide, stake?: number, probabilityYes?: number) => Promise<PlaceResult>
   placeMagnitude: (wallet: string, band: MagnitudeBand, stake?: number) => Promise<PlaceResult>
   defaultStake: number
 }
@@ -48,6 +52,7 @@ export function useMarkets(predictor: string | null, arenaId = 'ansem'): UseMark
   const [magnitudePositions, setMagnitudePositions] = useState<MagnitudeMarketPosition[]>([])
   const [loading, setLoading] = useState(true)
   const [live, setLive] = useState(false)
+  const [analytics, setAnalytics] = useState<ArenaAnalytics | undefined>(undefined)
   const liveRef = useRef(false)
 
   // The local parimutuel fallback only has fixture data for the original
@@ -55,6 +60,7 @@ export function useMarkets(predictor: string | null, arenaId = 'ansem'): UseMark
   // different token's name would be actively misleading, so a failed fetch
   // there just shows empty rather than fabricating holders.
   const loadLocal = useCallback(() => {
+    setAnalytics(undefined)
     if (arenaId !== 'ansem') {
       setMarkets([])
       setPositions([])
@@ -75,6 +81,7 @@ export function useMarkets(predictor: string | null, arenaId = 'ansem'): UseMark
     if (!m || !m.holders?.length) return false
     setWin({ windowId: m.windowId, opensAt: m.opensAt, closesAt: m.closesAt })
     setMarkets(m.holders)
+    setAnalytics(m.analytics)
     setPositions(predictor ? await getMarketPositions(predictor, arenaId) : [])
     setBinaryPositions(predictor ? await getBinaryPositions(predictor, arenaId) : [])
     setMagnitudePositions(predictor ? await getMagnitudePositions(predictor, arenaId) : [])
@@ -114,10 +121,10 @@ export function useMarkets(predictor: string | null, arenaId = 'ansem'): UseMark
   )
 
   const placeBinary = useCallback(
-    async (wallet: string, side: BinarySide, stake: number = DEFAULT_STAKE): Promise<PlaceResult> => {
+    async (wallet: string, side: BinarySide, stake: number = DEFAULT_STAKE, probabilityYes?: number): Promise<PlaceResult> => {
       if (!predictor) return { ok: false, error: 'not-connected' }
       if (liveRef.current) {
-        const res = await betBinary(wallet, predictor, side, stake, arenaId)
+        const res = await betBinary(wallet, predictor, side, stake, arenaId, probabilityYes)
         if (res.ok) await refresh()
         return res
       }
@@ -153,6 +160,7 @@ export function useMarkets(predictor: string | null, arenaId = 'ansem'): UseMark
     magnitudePositions,
     loading,
     live,
+    analytics,
     place,
     placeBinary,
     placeMagnitude,
