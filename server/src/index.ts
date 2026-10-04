@@ -14,6 +14,11 @@ import { BscOracle } from './sold/BscOracle'
 import { ZashClient } from './sold/ZashClient'
 import { TRACKED_WALLETS, lookupHolder } from './sold/holderRegistry'
 import { BucketMarket, type OpenHolder } from './sold/BucketMarket'
+import {
+  COMMUNITY_CAP, COMMUNITY_TTL_DAYS, COMMUNITY_TTL_MS, COMMUNITY_RATE_MAX, COMMUNITY_RATE_WINDOW_MS,
+  COMMUNITY_TOUCH_THROTTLE_MS, COMMUNITY_MIN_HOLDERS, communityId, communityIdToMint, fetchTokenMeta, isMint,
+  type CommunityEntry,
+} from './sold/community'
 import type { ArenaSource, TrackedHolder, PredictionWindow, Prediction, Resolution, PredictorScore, RegisteredHolder, BatchWindow, BatchResult, BatchPrediction, BucketId, BinarySide, MagnitudeBand } from './sold/types'
 
 const ANSEM_MINT_DEFAULT = '9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump'
@@ -403,6 +408,80 @@ export class Directory extends DurableObject<Env> {
     return (await this.ctx.storage.get<Record<string, RoomInfo>>('rooms')) ?? {}
   }
 
+  // ── community tables ──
+  // Methods below never await network I/O, so each one is atomic (the worker
+  // validates the mint first, then calls communityAdd which re-checks limits).
+  private async community(): Promise<Record<string, CommunityEntry>> {
+    const all = (await this.ctx.storage.get<Record<string, CommunityEntry>>('community')) ?? {}
+    const cutoff = Date.now() - COMMUNITY_TTL_MS
+    let dirty = false
+    for (const [id, e] of Object.entries(all)) {
+      if (e.lastActive < cutoff) { delete all[id]; dirty = true }
+    }
+    if (dirty) await this.ctx.storage.put('community', all)
+    return all
+  }
+  async communityList(): Promise<CommunityEntry[]> {
+    return Object.values(await this.community()).sort((a, b) => b.createdAt - a.createdAt)
+  }
+  /** Entry for a live community id, or null. Optionally refreshes lastActive,
+      writing at most once per COMMUNITY_TOUCH_THROTTLE_MS. */
+  async communityResolve(id: string, touch: boolean): Promise<CommunityEntry | null> {
+    const all = await this.community()
+    const e = all[id]
+    if (!e) return null
+    if (touch && Date.now() - e.lastActive >= COMMUNITY_TOUCH_THROTTLE_MS) {
+      e.lastActive = Date.now()
+      await this.ctx.storage.put('community', all)
+    }
+    return e
+  }
+  private async recentNew(ip: string): Promise<{ rate: Record<string, number[]>; mine: number[] }> {
+    const rate = (await this.ctx.storage.get<Record<string, number[]>>('communityRate')) ?? {}
+    const cutoff = Date.now() - COMMUNITY_RATE_WINDOW_MS
+    let dirty = false
+    for (const [k, v] of Object.entries(rate)) {
+      const kept = v.filter((t) => t > cutoff)
+      if (kept.length !== v.length) { dirty = true; if (kept.length) rate[k] = kept; else delete rate[k] }
+    }
+    if (dirty) await this.ctx.storage.put('communityRate', rate)
+    return { rate, mine: rate[ip] ?? [] }
+  }
+  /** Cheap pre-check before any RPC spend. An already-listed mint just gets
+      its lastActive refreshed and is never rate limited or cap-blocked. */
+  async communityBegin(mint: string, ip: string): Promise<
+    { existing: CommunityEntry } | { error: 'rate-limited' | 'full' } | { error: null }
+  > {
+    const all = await this.community()
+    const e = all[communityId(mint)]
+    if (e) {
+      e.lastActive = Date.now()
+      await this.ctx.storage.put('community', all)
+      return { existing: e }
+    }
+    if ((await this.recentNew(ip)).mine.length >= COMMUNITY_RATE_MAX) return { error: 'rate-limited' }
+    if (Object.keys(all).length >= COMMUNITY_CAP) return { error: 'full' }
+    return { error: null }
+  }
+  async communityAdd(entry: CommunityEntry, ip: string): Promise<
+    { ok: true; table: CommunityEntry; created: boolean } | { ok: false; error: 'rate-limited' | 'full' }
+  > {
+    const all = await this.community()
+    const e = all[entry.id]
+    if (e) {
+      e.lastActive = Date.now()
+      await this.ctx.storage.put('community', all)
+      return { ok: true, table: e, created: false }
+    }
+    const { rate, mine } = await this.recentNew(ip)
+    if (mine.length >= COMMUNITY_RATE_MAX) return { ok: false, error: 'rate-limited' }
+    if (Object.keys(all).length >= COMMUNITY_CAP) return { ok: false, error: 'full' }
+    all[entry.id] = entry
+    rate[ip] = [...mine, Date.now()]
+    await this.ctx.storage.put({ community: all, communityRate: rate })
+    return { ok: true, table: entry, created: true }
+  }
+
   // ── friends ──
   async friendRequest(from: string, fromName: string, to: string): Promise<void> {
     if (!from || !to || from === to) return
@@ -725,8 +804,64 @@ export default {
       // path so /sold/play and existing ANSEM positions are untouched.
       // Anything else must be a known arena source.
       const arenaParam = url.searchParams.get('arena') ?? 'ansem'
-      const arenaId = arenaParam === 'ansem' || ARENA_SOURCES[arenaParam] ? arenaParam : 'ansem'
-      const arenaSource: ArenaSource | null = arenaId === 'ansem' ? null : ARENA_SOURCES[arenaId]
+
+      // Community tables: GET list / POST list (no arena param involved).
+      if (url.pathname === '/sold/community' && request.method === 'GET') {
+        return json({ tables: await env.DIRECTORY.getByName('global').communityList(), cap: COMMUNITY_CAP, ttlDays: COMMUNITY_TTL_DAYS })
+      }
+      if (url.pathname === '/sold/community/list' && request.method === 'POST') {
+        let b: { mint?: unknown }
+        try { b = (await request.json()) as typeof b } catch { return json({ ok: false, error: 'bad-mint' }, 400) }
+        if (!isMint(b?.mint)) return json({ ok: false, error: 'bad-mint' }, 400)
+        const mint = b.mint
+        const now = Date.now()
+
+        // A built-in Solana arena is returned as itself, never duplicated as sol-<mint>.
+        const builtin = (['ansem', 'bonk', 'wif'] as const).find((id) => {
+          const src = id === 'ansem' ? (env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT) : (ARENA_SOURCES[id] as { mint: string }).mint
+          return src === mint
+        })
+        if (builtin) {
+          const table: CommunityEntry = { mint, id: builtin, symbol: builtin.toUpperCase(), name: builtin.toUpperCase(), createdAt: now, lastActive: now }
+          return json({ ok: true, table, created: false })
+        }
+
+        const dir = env.DIRECTORY.getByName('global')
+        const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
+        const begin = await dir.communityBegin(mint, ip)
+        if ('existing' in begin) return json({ ok: true, table: begin.existing, created: false })
+        if (begin.error === 'rate-limited') return json({ ok: false, error: 'rate-limited' }, 429)
+        if (begin.error === 'full') return json({ ok: false, error: 'full' }, 409)
+
+        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, mint)
+        const probe = await oracle.probeMint(mint)
+        if (probe.kind === 'unreachable') return json({ ok: false, error: 'unreachable' }, 503)
+        if (probe.kind === 'invalid') return json({ ok: false, error: 'not-a-token' }, 422)
+        const holders = await oracle.fetchTopHoldersByMint(mint)
+        if (holders.filter((h) => h.balance > 0).length < COMMUNITY_MIN_HOLDERS) {
+          return json({ ok: false, error: 'too-few-holders' }, 422)
+        }
+        const meta = await fetchTokenMeta(mint)
+        const res = await dir.communityAdd({ mint, id: communityId(mint), ...meta, createdAt: now, lastActive: now }, ip)
+        if (!res.ok) return json(res, res.error === 'full' ? 409 : 429)
+        return json(res)
+      }
+
+      // A sol-<mint> id must be a currently listed table: no silent ansem fallback.
+      let arenaId: string
+      let arenaSource: ArenaSource | null
+      if (arenaParam.startsWith('sol-')) {
+        const cMint = communityIdToMint(arenaParam)
+        const entry = cMint
+          ? await env.DIRECTORY.getByName('global').communityResolve(arenaParam, url.pathname === '/sold/markets')
+          : null
+        if (!cMint || !entry) return json({ error: 'unknown-arena' }, 404)
+        arenaId = arenaParam
+        arenaSource = { kind: 'solana', mint: cMint }
+      } else {
+        arenaId = arenaParam === 'ansem' || ARENA_SOURCES[arenaParam] ? arenaParam : 'ansem'
+        arenaSource = arenaId === 'ansem' ? null : ARENA_SOURCES[arenaId]
+      }
       // Bucket-market id is namespaced per arena so each token gets its own
       // window; ANSEM keeps its original (unnamespaced) id unchanged.
       // The version tag forces fresh Durable Objects: ensureOpen() is

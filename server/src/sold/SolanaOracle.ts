@@ -47,6 +47,52 @@ export class SolanaOracle {
     return null
   }
 
+  /** Three-way mint probe so callers can tell "not a mint" from "RPC down".
+   *  getTokenSupply rejects non-mint and missing accounts with a JSON-RPC
+   *  error (-32602); anything else (http error, timeout, other rpc error)
+   *  counts as unreachable. */
+  async probeMint(mint: string): Promise<
+    { kind: 'ok'; decimals: number; uiAmount: number } | { kind: 'invalid' } | { kind: 'unreachable' }
+  > {
+    const endpoints = [this.rpc]
+    if (this.rpc !== 'https://api.mainnet-beta.solana.com') endpoints.push('https://api.mainnet-beta.solana.com')
+    for (const endpoint of endpoints) {
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: mint, method: 'getTokenSupply', params: [mint] }),
+          signal: AbortSignal.timeout(5000),
+        })
+        if (!res.ok) { console.error(`rpc getTokenSupply http ${res.status}`); continue }
+        const data = (await res.json()) as {
+          result?: { value?: { decimals?: number; uiAmount?: number | null } }
+          error?: { code: number; message: string }
+        }
+        if (data.error) {
+          if (data.error.code === -32602) return { kind: 'invalid' }
+          console.error(`rpc getTokenSupply error ${data.error.code}`)
+          continue
+        }
+        const v = data.result?.value
+        if (v && typeof v.decimals === 'number' && typeof v.uiAmount === 'number') {
+          return { kind: 'ok', decimals: v.decimals, uiAmount: v.uiAmount }
+        }
+        return { kind: 'invalid' }
+      } catch (e) {
+        console.error(`rpc getTokenSupply threw: ${e instanceof Error ? e.message : e}`)
+      }
+    }
+    return { kind: 'unreachable' }
+  }
+
+  /** Mint decimals + supply via getTokenSupply, or null on any failure
+   *  (including a non-mint account). */
+  async fetchMintInfo(mint: string): Promise<{ decimals: number; uiAmount: number } | null> {
+    const r = await this.probeMint(mint)
+    return r.kind === 'ok' ? { decimals: r.decimals, uiAmount: r.uiAmount } : null
+  }
+
   /** Returns current $ANSEM ui_amount balance for each wallet.
    *  Falls back to knownBalance from registry when live RPC returns 0 or fails. */
   async fetchCurrentBalances(wallets: string[]): Promise<HolderBalance[]> {
