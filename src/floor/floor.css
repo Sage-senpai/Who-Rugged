@@ -44,7 +44,22 @@
 .fl-tr { top: 12px; right: 12px; display: flex; gap: 6px; }
 .fl-sm { padding: 7px 12px; font-size: 12px; background: color-mix(in oklch, var(--ar-bg) 88%, transparent); }
 .fl-tr .fl-sm { color: var(--ar-text); }
-.fl-now { max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-sound {
+  top: 52px; right: 12px; width: min(300px, calc(100% - 24px)); padding: 12px 14px; display: grid; gap: 10px;
+  background: color-mix(in oklch, var(--ar-bg) 94%, transparent); border: 1px solid var(--ar-border); border-radius: var(--ar-radius-sm);
+}
+.fl-sound .fl-help-title { margin: 0; }
+.fl-sound-now { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.fl-sound-title { color: var(--ar-text); font: 12px var(--ar-mono); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-sound-off { margin: 0; color: var(--ar-text-dim); font-size: 12px; }
+.fl-vol { display: grid; grid-template-columns: 40px 1fr 40px auto; align-items: center; gap: 8px; }
+.fl-vol button {
+  width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--ar-border); font-size: 20px; line-height: 1;
+  background: color-mix(in oklch, var(--ar-bg) 88%, transparent); color: var(--ar-text);
+}
+.fl-vol button:hover { border-color: var(--ar-gold); }
+.fl-vol input[type=range] { width: 100%; min-width: 0; accent-color: var(--ar-gold); height: 28px; }
+.fl-vol-n { min-width: 3.2em; text-align: right; font: 12px var(--ar-mono); color: var(--ar-text-dim); }
 .fl-help {
   top: 52px; right: 12px; width: min(280px, calc(100% - 24px)); padding: 12px 14px;
   background: color-mix(in oklch, var(--ar-bg) 94%, transparent); border: 1px solid var(--ar-border); border-radius: var(--ar-radius-sm);
@@ -148,6 +163,9 @@
 .fl-entry-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .fl-entry-fine { margin: 16px 0 0; color: var(--ar-text-faint); font-size: 12px; }
 .fl-entry-fine a { color: var(--ar-gold); }
+
+@media (max-width: 560px) { .fl-btn-text { display: none; } }
+@media (max-width: 820px) { .fl-pop .fl-report { visibility: hidden; } }
 
 @media (max-width: 820px) {
   .fl-dock { left: 0; right: 0; top: auto; bottom: 0; width: 100%; max-height: 58%; border-radius: var(--ar-radius) var(--ar-radius) 0 0; border-bottom: 0; }

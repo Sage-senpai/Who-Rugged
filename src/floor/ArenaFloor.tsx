@@ -26,6 +26,7 @@ import { pct } from '../sold/dmp/dmp'
 import { useSettings } from '../settings/SettingsContext'
 import { sfx } from '../lib/sfx'
 import { jazz } from '../lib/jazz'
+import { volume } from '../lib/volume'
 import { FloorWorld, COMMUNITY_SLOTS, communitySlotPos, type FloorTable, type LockedTable, type Prompt, type InteractKind } from './FloorWorld'
 import { ListCoinForm } from './ListCoin'
 import '../sold/arena/arena.css'
@@ -157,6 +158,8 @@ function FloorScene({ onFail }: { onFail: () => void }) {
   const [helpOpen, setHelpOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [now, setNow] = useState('')
+  const [soundOpen, setSoundOpen] = useState(false)
+  const [vol, setVol] = useState(volume.get)
   const toastT = useRef<number | undefined>(undefined)
   const joyRef = useRef<HTMLDivElement | null>(null)
   const knobRef = useRef<HTMLSpanElement | null>(null)
@@ -269,12 +272,14 @@ function FloorScene({ onFail }: { onFail: () => void }) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (listing) setListing(false)
-      else if (helpOpen || emoteOpen || reportOpen) { setHelpOpen(false); setEmoteOpen(false); setReportOpen(false) }
+      else if (helpOpen || emoteOpen || reportOpen || soundOpen) { setHelpOpen(false); setEmoteOpen(false); setReportOpen(false); setSoundOpen(false) }
       else if (seated) stand()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [seated, stand, listing, helpOpen, emoteOpen, reportOpen])
+  }, [seated, stand, listing, helpOpen, emoteOpen, reportOpen, soundOpen])
+
+  useEffect(() => volume.subscribe(setVol), [])
 
   useEffect(() => { if (!entered) enterBtn.current?.focus() }, [entered, community])
 
@@ -353,7 +358,7 @@ function FloorScene({ onFail }: { onFail: () => void }) {
   return (
     <div className={`arena-shell fl-shell${seated ? ' fl-seated' : ''}`}>
       <ArenaTopbar inPlay={address ? myInPlay : undefined} />
-      <div className="fl-world">
+      <div className={`fl-world${soundOpen || helpOpen ? ' fl-pop' : ''}`}>
         <canvas ref={canvasRef} className="fl-canvas" tabIndex={0}
           aria-label="3D casino floor. Walk with W A S D or the arrow keys, press E to use what is nearby." />
 
@@ -372,12 +377,10 @@ function FloorScene({ onFail }: { onFail: () => void }) {
         </div>
 
         <div className="fl-hud fl-tr">
-          {now && (
-            <button className="arena-btn arena-btn-ghost fl-sm fl-now" onClick={() => { jazz.next(); setNow(jazz.label()) }} title="Next piece">
-              <span aria-hidden="true">♪</span> {now}
-            </button>
-          )}
-          <button className="arena-btn arena-btn-ghost fl-sm" onClick={() => setHelpOpen((o) => !o)} aria-expanded={helpOpen} aria-label="Controls and help">?</button>
+          <button className="arena-btn arena-btn-ghost fl-sm" onClick={() => { setSoundOpen((o) => !o); setHelpOpen(false) }} aria-expanded={soundOpen} aria-label="Sound and volume">
+            <span aria-hidden="true">{settings.music ? '♪' : '✕'}</span><span className="fl-btn-text"> Sound</span>
+          </button>
+          <button className="arena-btn arena-btn-ghost fl-sm" onClick={() => { setHelpOpen((o) => !o); setSoundOpen(false) }} aria-expanded={helpOpen} aria-label="Controls and help">?</button>
           <Link to="/arena/map" className="arena-btn arena-btn-ghost fl-sm">Map view</Link>
         </div>
         {helpOpen && (
@@ -401,6 +404,33 @@ function FloorScene({ onFail }: { onFail: () => void }) {
               </ul>
             )}
             <p className="fl-help-links"><Link to="/sold">How it works</Link> · <Link to="/how">The detective game</Link></p>
+          </div>
+        )}
+
+        {soundOpen && (
+          <div className="fl-hud fl-sound" role="dialog" aria-label="Sound">
+            <p className="fl-help-title">Sound</p>
+            {settings.music ? (
+              <>
+                <div className="fl-sound-now">
+                  <span className="fl-sound-title">{now || 'Starting up…'}</span>
+                  <button className="arena-btn arena-btn-ghost fl-sm" onClick={() => { jazz.next(); setNow(jazz.label()) }}>Next piece</button>
+                </div>
+                <div className="fl-vol">
+                  <button onClick={() => volume.set(vol - 0.1)} aria-label="Quieter">−</button>
+                  <input type="range" min={0} max={100} step={5} value={Math.round(vol * 100)}
+                    onChange={(e) => volume.set(Number(e.target.value) / 100)} aria-label="Music volume" />
+                  <button onClick={() => volume.set(vol + 0.1)} aria-label="Louder">+</button>
+                  <span className="fl-vol-n">{Math.round(vol * 100)}%</span>
+                </div>
+                <button className="arena-btn arena-btn-ghost fl-sm" onClick={() => toggle('music')}>Mute music</button>
+              </>
+            ) : (
+              <>
+                <p className="fl-sound-off">Music is off.</p>
+                <button className="arena-btn arena-btn-primary" onClick={() => toggle('music')}>Turn music on</button>
+              </>
+            )}
           </div>
         )}
 

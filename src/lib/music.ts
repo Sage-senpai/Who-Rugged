@@ -114,6 +114,7 @@ let nextNoteTime = 0
 let step = 0
 
 const VOLUME = 0.5
+let level = 1 // user volume multiplier; 1 is the original loudness
 const LOOKAHEAD = 25 // ms
 const AHEAD = 0.12 // s
 
@@ -207,7 +208,7 @@ function begin(track: TrackName): void {
   nextNoteTime = a.currentTime + 0.05
   master.gain.cancelScheduledValues(a.currentTime)
   master.gain.setValueAtTime(master.gain.value, a.currentTime)
-  master.gain.linearRampToValueAtTime(VOLUME, a.currentTime + 0.4)
+  master.gain.linearRampToValueAtTime(VOLUME * level, a.currentTime + 0.4)
   timer = window.setInterval(scheduler, LOOKAHEAD)
 }
 
@@ -228,6 +229,10 @@ export const music = {
       timer = null
     }
     playing = null
+    // A stopped track must not come back by itself: resume() and setEnabled()
+    // restart whatever is still "desired", which is how the old chiptune ended
+    // up playing underneath the floor's jazz. The director asks again if needed.
+    desired = null
     if (a && master) {
       master.gain.cancelScheduledValues(a.currentTime)
       master.gain.linearRampToValueAtTime(0, a.currentTime + 0.25)
@@ -252,5 +257,13 @@ export const music = {
   },
   isEnabled(): boolean {
     return enabled
+  },
+  isPlaying(): boolean {
+    return playing !== null
+  },
+  /** 1 is the original loudness; the app's volume control maps 0..1 to 0..2. */
+  setVolume(v: number): void {
+    level = Math.min(2, Math.max(0, v))
+    if (ctx && master && playing) master.gain.setTargetAtTime(VOLUME * level, ctx.currentTime, 0.05)
   },
 }

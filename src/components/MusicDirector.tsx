@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { music } from '../lib/music'
 import { jazz } from '../lib/jazz'
+import { volume } from '../lib/volume'
 import { useSettings } from '../settings/SettingsContext'
 
 type TrackName = 'attract' | 'menu' | 'settings' | 'stats' | 'how' | 'play'
@@ -29,6 +30,8 @@ export function MusicDirector() {
   const { settings } = useSettings()
   const track = trackFor(pathname)
   const onFloor = isFloorRoute(pathname)
+  const onFloorRef = useRef(onFloor)
+  onFloorRef.current = onFloor
 
   useEffect(() => {
     if (!settings.music) {
@@ -43,10 +46,20 @@ export function MusicDirector() {
     }
   }, [track, onFloor, settings.music])
 
+  /* One saved volume drives both engines. The chiptune's 1 is its original
+     loudness, so the 0..1 control maps to 0..2 around a default of 0.5. */
   useEffect(() => {
+    const apply = (v: number) => { jazz.setVolume(v); music.setVolume(v * 2) }
+    apply(volume.get())
+    return volume.subscribe(apply)
+  }, [])
+
+  useEffect(() => {
+    // Only the engine that owns this screen is resumed. Resuming both let the
+    // chiptune restart underneath the jazz on the first tap.
     const resume = () => {
-      music.resume()
-      jazz.resume()
+      if (onFloorRef.current) jazz.resume()
+      else music.resume()
     }
     window.addEventListener('pointerdown', resume)
     window.addEventListener('keydown', resume)
