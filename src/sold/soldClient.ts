@@ -93,7 +93,13 @@ export interface ServerMarkets {
   analytics?: ArenaAnalytics
 }
 
-export const getMarkets = (arena?: string) => get<ServerMarkets | null>(withArena('/sold/markets', arena), null)
+/** `passive` marks a read made only to draw a sign or tile. The worker does not
+ *  count it as activity, so a community table is not kept alive by people who
+ *  merely have the floor open. */
+export const getMarkets = (arena?: string, passive = false) => {
+  const path = withArena('/sold/markets', arena)
+  return get<ServerMarkets | null>(passive ? `${path}${path.includes('?') ? '&' : '?'}passive=1` : path, null)
+}
 
 export const betBucket = (wallet: string, predictor: string, bucket: BucketId, stake: number, arena?: string) =>
   post<{ ok: boolean; error?: string }>(

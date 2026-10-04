@@ -853,7 +853,7 @@ export default {
       if (arenaParam.startsWith('sol-')) {
         const cMint = communityIdToMint(arenaParam)
         const entry = cMint
-          ? await env.DIRECTORY.getByName('global').communityResolve(arenaParam, url.pathname === '/sold/markets')
+          ? await env.DIRECTORY.getByName('global').communityResolve(arenaParam, url.pathname === '/sold/markets' && url.searchParams.get('passive') !== '1')
           : null
         if (!cMint || !entry) return json({ error: 'unknown-arena' }, 404)
         arenaId = arenaParam

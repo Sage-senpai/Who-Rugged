@@ -77,10 +77,11 @@ export function ArenaFloor() {
   return <FloorScene onFail={onFail} />
 }
 
-/* Reads one community arena's live numbers for its sign. Renders nothing. */
+/* Reads one community arena's live numbers for its sign. Renders nothing. The
+   read is passive: it must not keep an otherwise idle table alive. */
 function CommunityProbe({ id, onInfo }: { id: string; onInfo: (id: string, risk: number | null, holders: number | null) => void }) {
   const { address } = useSolana()
-  const m = useMarkets(address, id)
+  const m = useMarkets(address, id, true)
   const risk = m.analytics?.topPYes ?? null
   const holders = m.markets.length || null
   useEffect(() => { onInfo(id, risk, holders) }, [id, risk, holders, onInfo])

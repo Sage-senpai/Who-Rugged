@@ -44,7 +44,7 @@ export interface UseMarketsReturn {
   defaultStake: number
 }
 
-export function useMarkets(predictor: string | null, arenaId = 'ansem'): UseMarketsReturn {
+export function useMarkets(predictor: string | null, arenaId = 'ansem', passive = false): UseMarketsReturn {
   const [win, setWin] = useState(currentWindow)
   const [markets, setMarkets] = useState<HolderMarket[]>([])
   const [positions, setPositions] = useState<MarketPosition[]>([])
@@ -77,7 +77,7 @@ export function useMarkets(predictor: string | null, arenaId = 'ansem'): UseMark
   }, [predictor, arenaId])
 
   const loadServer = useCallback(async (): Promise<boolean> => {
-    const m = await getMarkets(arenaId)
+    const m = await getMarkets(arenaId, passive)
     if (!m || !m.holders?.length) return false
     setWin({ windowId: m.windowId, opensAt: m.opensAt, closesAt: m.closesAt })
     setMarkets(m.holders)
@@ -86,7 +86,7 @@ export function useMarkets(predictor: string | null, arenaId = 'ansem'): UseMark
     setBinaryPositions(predictor ? await getBinaryPositions(predictor, arenaId) : [])
     setMagnitudePositions(predictor ? await getMagnitudePositions(predictor, arenaId) : [])
     return true
-  }, [predictor, arenaId])
+  }, [predictor, arenaId, passive])
 
   const refresh = useCallback(async () => {
     const ok = await loadServer()

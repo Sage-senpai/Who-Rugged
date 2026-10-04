@@ -36,7 +36,7 @@ Server contract (`server/src/index.ts`):
 - `POST /sold/community/list` with `{ mint }` returns `{ ok: true, table, created }` or `{ ok: false, error }`. Errors: `bad-mint` 400, `not-a-token` 422, `too-few-holders` 422, `full` 409, `rate-limited` 429, `unreachable` 503.
 - A community arena id is `sol-<mint>`. An id that is not currently listed returns 404 `unknown-arena` from every `/sold` route. Other unknown ids keep their old fallback to `ansem`.
 
-Guardrails: at most 8 live community tables, idle tables expire after 7 days (activity on `/sold/markets` renews them, written at most every 10 minutes), 3 new listings per client IP per hour, the mint must be a real SPL token mint with at least 3 holders, and symbol and name are sanitised. Already-listed mints and the built-in Solana arenas are never duplicated or counted again.
+Guardrails: at most 8 live community tables, idle tables expire after 7 days (a normal `/sold/markets` read renews them, written at most every 10 minutes; the floor's sign reads send `passive=1` and do not, so standing on the floor never keeps a table alive), 3 new listings per client IP per hour, the mint must be a real SPL token mint with at least 3 holders, and symbol and name are sanitised. Already-listed mints and the built-in Solana arenas are never duplicated or counted again.
 
 Known limits: an invalid mint still costs one RPC call per attempt, because only new listings are rate limited. Holder data comes from the top 11 token accounts. BSC coins are not supported yet.
 
