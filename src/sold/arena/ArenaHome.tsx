@@ -4,10 +4,12 @@
    them live in arenas.ts later needs no further code change here. Rules of
    hooks forbid calling a hook in a loop, so this is explicit rather than
    generic — fine for a list this size. */
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useSolana } from '../../wallet/SolanaContext'
-import { useMarkets, type UseMarketsReturn } from '../market/useMarkets'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import type { UseMarketsReturn } from '../market/useMarkets'
+import { useAllArenaMarkets } from './useAllArenaMarkets'
+import { EMPTY_COMMUNITY, fetchCommunity, type CommunityList } from './communityClient'
+import { ListCoinForm } from '../../floor/ListCoin'
 import { pct } from '../dmp/dmp'
 import { poolTotal } from '../market/buckets'
 import { binaryPoolTotal } from '../market/binary'
@@ -31,11 +33,6 @@ function tvlOf(markets: UseMarketsReturn): number {
     const mag = magnitudePoolTotal(m.realMagnitudePools ?? m.magnitudePools ?? { b0_10: 0, b10_25: 0, b25_50: 0, b50_75: 0, b75_100: 0 })
     return sum + time + bin + mag
   }, 0)
-}
-
-function inPlayOf(markets: UseMarketsReturn): number {
-  const all = [...markets.positions, ...markets.binaryPositions, ...markets.magnitudePositions]
-  return all.reduce((s, p) => s + p.stake, 0)
 }
 
 /** The "i" icon: a backend wallet-history signal, cached and refreshed on a
@@ -91,25 +88,14 @@ function AnalyticsInfo({ arena, markets, open, onToggle }: {
 
 export function ArenaHome() {
   const navigate = useNavigate()
-  const { address } = useSolana()
+  const { address, byArena, myInPlay } = useAllArenaMarkets()
   const [openInfo, setOpenInfo] = useState<string | null>(null)
-  const ansem = useMarkets(address, 'ansem')
-  const bonk = useMarkets(address, 'bonk')
-  const wif = useMarkets(address, 'wif')
-  const floki = useMarkets(address, 'floki')
-  const babydoge = useMarkets(address, 'babydoge')
-  const broccoli = useMarkets(address, 'broccoli')
-  const zashArc = useMarkets(address, 'zash-arc')
-  const zashSeis = useMarkets(address, 'zash-seis')
-  const byArena: Record<string, UseMarketsReturn> = {
-    ansem, bonk, wif, floki, babydoge, broccoli, 'zash-arc': zashArc, 'zash-seis': zashSeis,
-  }
-  const allMarkets = [ansem, bonk, wif, floki, babydoge, broccoli, zashArc, zashSeis]
-
-  const myInPlay = useMemo(
-    () => allMarkets.reduce((s, m) => s + inPlayOf(m), 0),
-    [ansem, bonk, wif, floki, babydoge, broccoli, zashArc, zashSeis],
-  )
+  const [community, setCommunity] = useState<CommunityList>(EMPTY_COMMUNITY)
+  useEffect(() => {
+    let cancelled = false
+    void fetchCommunity().then((l) => { if (!cancelled) setCommunity(l) })
+    return () => { cancelled = true }
+  }, [])
 
   return (
     <div className="arena-shell">
@@ -121,6 +107,7 @@ export function ArenaHome() {
             <h1 className="arena-h1">Choose a token arena</h1>
             <p className="arena-sub">Pick a live arena to scan its top holders and predict what they do next.</p>
           </div>
+          <Link to="/arena" className="arena-btn arena-btn-ghost">Walk the 3D floor</Link>
         </div>
 
         <div className="arena-grid">
@@ -179,6 +166,38 @@ export function ArenaHome() {
               </div>
             )
           })}
+        </div>
+
+        <div className="arena-scene-head" style={{ marginTop: 36 }}>
+          <div>
+            <p className="arena-eyebrow">Community</p>
+            <h2 className="arena-h1">Community tables</h2>
+            <p className="arena-sub">Tables players opened for their own Solana coins. Paste a token address to open one.</p>
+          </div>
+        </div>
+        {community.tables.length > 0 && (
+          <div className="arena-grid" style={{ marginBottom: 20 }}>
+            {community.tables.map((t) => (
+              <div key={t.id} className="arena-tile">
+                <div className="arena-tile-head">
+                  <span>
+                    <p className="arena-tile-name">{t.name}</p>
+                    <span className="arena-tile-ticker">${t.symbol}</span>
+                  </span>
+                  <span className="arena-badge arena-badge-neutral">COMMUNITY</span>
+                </div>
+                <button className="arena-btn arena-btn-primary arena-btn-block" onClick={() => navigate(`/arena/${t.id}`)}>Enter Arena</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ maxWidth: 520 }}>
+          <ListCoinForm
+            open={community.tables.length}
+            cap={community.cap}
+            ttlDays={community.ttlDays}
+            onListed={(t) => navigate(`/arena/${t.id}`)}
+          />
         </div>
       </div>
     </div>

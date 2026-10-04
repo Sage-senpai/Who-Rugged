@@ -91,4 +91,30 @@ export const ARENAS: ArenaDef[] = [
 
 export const LIVE_ARENAS = ARENAS.filter((a) => a.status === 'live')
 
-export const arenaById = (id: string): ArenaDef | undefined => ARENAS.find((a) => a.id === id)
+/* Community tables: any Solana mint a player opened through the worker's
+   registry (server/src/index.ts, /sold/community). Ids are `sol-<mint>`. The
+   worker is the authority on whether one is listed; the client only needs a
+   display name, so an id we have not heard of yet still resolves to a plain
+   definition and the market calls simply come back empty if it is not listed. */
+export const COMMUNITY_PREFIX = 'sol-'
+export const MINT_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
+
+const community = new Map<string, ArenaDef>()
+
+export function registerCommunityArena(t: { id: string; mint: string; symbol: string; name: string }): ArenaDef {
+  const def: ArenaDef = {
+    id: t.id, name: t.name, ticker: `$${t.symbol}`, mint: t.mint, totalSupply: null, status: 'live', community: true,
+  }
+  community.set(t.id, def)
+  return def
+}
+
+function synthesizeCommunity(id: string): ArenaDef | undefined {
+  if (!id.startsWith(COMMUNITY_PREFIX)) return undefined
+  const mint = id.slice(COMMUNITY_PREFIX.length)
+  if (!MINT_RE.test(mint)) return undefined
+  return registerCommunityArena({ id, mint, symbol: mint.slice(0, 4).toUpperCase(), name: `Token ${mint.slice(0, 4)}` })
+}
+
+export const arenaById = (id: string): ArenaDef | undefined =>
+  ARENAS.find((a) => a.id === id) ?? community.get(id) ?? synthesizeCommunity(id)

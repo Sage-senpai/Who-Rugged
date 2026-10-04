@@ -13,4 +13,6 @@ export interface ArenaDef {
   /** Total token supply, for % of supply math. Null when not yet wired. */
   totalSupply: number | null
   status: ArenaStatus
+  /** Opened by a player through the worker's community registry, not curated here. */
+  community?: boolean
 }

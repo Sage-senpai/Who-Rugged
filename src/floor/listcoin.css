@@ -1,0 +1,14 @@
+/* The coin-listing form, shared by the 3D floor and the flat map. Uses the
+   arena design tokens, so it must render inside .arena-shell. */
+.fl-list { display: grid; gap: 10px; }
+.fl-list-label { font: 800 11px var(--ar-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--ar-text-dim); }
+.fl-list-row { display: flex; gap: 8px; }
+.fl-list-input {
+  flex: 1; min-width: 0; padding: 11px 12px; border-radius: var(--ar-radius-sm); border: 1px solid var(--ar-border);
+  background: var(--ar-bg); color: var(--ar-text); font: 13px var(--ar-mono);
+}
+.fl-list-input:focus-visible { outline: 2px solid var(--ar-gold); outline-offset: 1px; }
+.fl-list-msg { margin: 0; min-height: 3em; font-size: 12px; line-height: 1.5; color: var(--ar-text-dim); }
+.fl-list-err { color: var(--ar-negative); }
+.fl-list-fine { margin: 0; font-size: 11px; color: var(--ar-text-faint); }
+.fl-list .fl-sm { padding: 7px 12px; font-size: 12px; }

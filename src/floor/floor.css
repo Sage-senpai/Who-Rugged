@@ -1,0 +1,174 @@
+/* The 3D floor screen. Lives inside .arena-shell, so every --ar-* token below
+   is the arena design system's, not the CRT theme's.
+   Control placement, by thumb reach:
+   - walking (stick or keys) bottom-left, acting (USE) bottom-right, on touch;
+   - the contextual prompt bottom-centre, the only thing that appears and goes;
+   - status and help top-left and top-right, collapsed until asked for. */
+.fl-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.fl-world {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #050a08;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.fl-canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
+
+.fl-hud { position: absolute; z-index: 5; font-size: 12px; }
+.fl-glass { background: color-mix(in oklch, var(--ar-bg) 88%, transparent); border: 1px solid var(--ar-border); }
+
+/* top left: who is here, and the one-line floor report */
+.fl-tl { top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; max-width: min(340px, calc(100% - 140px)); }
+.fl-tl .arena-chip { background: color-mix(in oklch, var(--ar-bg) 88%, transparent); }
+.fl-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ar-accent); animation: fl-pulse 1.6s infinite; }
+@keyframes fl-pulse { 50% { opacity: 0.25; } }
+.fl-report { width: 100%; background: color-mix(in oklch, var(--ar-bg) 88%, transparent); border: 1px solid var(--ar-border); border-radius: var(--ar-radius-sm); }
+.fl-report-head {
+  width: 100%; display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 7px 10px;
+  background: none; border: 0; color: var(--ar-gold); font: 12px var(--ar-mono); text-align: left;
+}
+.fl-report-head:hover { color: var(--ar-text); }
+.fl-feed { list-style: none; margin: 0; padding: 0 10px 8px; display: flex; flex-direction: column; gap: 4px; color: var(--ar-text-dim); font-family: var(--ar-mono); }
+
+/* top right: help and map */
+.fl-tr { top: 12px; right: 12px; display: flex; gap: 6px; }
+.fl-sm { padding: 7px 12px; font-size: 12px; background: color-mix(in oklch, var(--ar-bg) 88%, transparent); }
+.fl-tr .fl-sm { color: var(--ar-text); }
+.fl-now { max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-help {
+  top: 52px; right: 12px; width: min(280px, calc(100% - 24px)); padding: 12px 14px;
+  background: color-mix(in oklch, var(--ar-bg) 94%, transparent); border: 1px solid var(--ar-border); border-radius: var(--ar-radius-sm);
+}
+.fl-help-title { margin: 0 0 6px; font: 800 11px var(--ar-mono); letter-spacing: 1px; color: var(--ar-accent); text-transform: uppercase; }
+.fl-help ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; color: var(--ar-text-dim); font-size: 12px; }
+.fl-help b { color: var(--ar-text); }
+.fl-help-links { margin: 10px 0 0; color: var(--ar-text-faint); }
+.fl-help-links a { color: var(--ar-gold); }
+
+.fl-toast {
+  top: 60px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 24px); text-align: center;
+  padding: 9px 14px; border-radius: var(--ar-radius-sm); pointer-events: none;
+  background: color-mix(in oklch, var(--ar-bg) 92%, transparent); border: 1px solid var(--ar-gold); color: var(--ar-gold);
+}
+
+/* bottom centre: only ever the thing in front of you */
+.fl-prompt {
+  left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; white-space: nowrap; max-width: calc(100% - 24px);
+  background: color-mix(in oklch, var(--ar-bg) 92%, transparent); border: 1px solid var(--ar-gold); border-radius: var(--ar-radius-sm);
+  font-size: 13px;
+}
+.fl-prompt kbd {
+  font: 700 12px var(--ar-mono); color: var(--ar-gold); border: 1px solid var(--ar-gold);
+  border-radius: 6px; padding: 2px 8px; background: oklch(80% 0.15 85 / 0.1);
+}
+.fl-prompt small { color: var(--ar-text-faint); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+
+/* bottom left on a desktop: one Emote button that opens a short row */
+.fl-emotes { left: 12px; bottom: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.fl-emote-btn {
+  background: color-mix(in oklch, var(--ar-bg) 88%, transparent); border: 1px solid var(--ar-border); color: var(--ar-text);
+  border-radius: 999px; padding: 7px 14px; font-size: 12px; font-weight: 700;
+}
+.fl-emote-btn:hover { border-color: var(--ar-gold); }
+.fl-emote-pop { display: flex; gap: 6px; flex-wrap: wrap; max-width: min(420px, calc(100vw - 24px)); }
+.fl-emote-pop button {
+  background: color-mix(in oklch, var(--ar-bg) 92%, transparent); border: 1px solid var(--ar-border); color: var(--ar-text);
+  border-radius: 999px; padding: 7px 12px; font-size: 12px;
+}
+.fl-emote-pop button:hover { border-color: var(--ar-gold); }
+
+/* touch controls: the stick is for the left thumb, USE for the right */
+.fl-joy {
+  display: none; left: 14px; bottom: 14px; width: 112px; height: 112px; border-radius: 50%;
+  border: 2px solid oklch(100% 0 0 / 0.2); background: color-mix(in oklch, var(--ar-bg) 70%, transparent); touch-action: none;
+}
+.fl-joy span {
+  position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
+  background: oklch(80% 0.15 85 / 0.6); border: 2px solid var(--ar-gold);
+}
+.fl-act {
+  display: none; right: 16px; bottom: 16px; width: 84px; height: 84px; border-radius: 50%;
+  border: 2px solid var(--ar-gold); background: color-mix(in oklch, var(--ar-bg) 90%, transparent);
+  color: var(--ar-gold); font: 700 15px var(--ar-mono);
+}
+.fl-recenter { left: 50%; top: 12px; transform: translateX(-50%); }
+.fl-lookhint {
+  left: 12px; bottom: 12px; margin: 0; padding: 6px 10px; color: var(--ar-text-dim); pointer-events: none;
+  background: color-mix(in oklch, var(--ar-bg) 80%, transparent); border-radius: var(--ar-radius-sm);
+}
+
+/* seated dock: the real arena flow, beside the room (or under it on small screens) */
+.fl-dock {
+  position: absolute; z-index: 6; top: 12px; right: 12px; bottom: 12px; width: min(470px, calc(100% - 24px));
+  display: flex; flex-direction: column; overflow: hidden;
+  background: color-mix(in oklch, var(--ar-bg) 94%, transparent); backdrop-filter: blur(8px);
+  border: 1px solid var(--ar-border); border-radius: var(--ar-radius);
+}
+.fl-dock.fl-peek { bottom: auto; }
+.fl-dock-bar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--ar-border); }
+.fl-dock-title { font: 800 13px var(--ar-mono); color: var(--ar-gold); letter-spacing: 0.5px; }
+.fl-dock-sp { flex: 1; }
+.fl-dock-body { flex: 1; overflow: auto; overscroll-behavior: contain; }
+.fl-dock .arena-page { padding: 14px; }
+.fl-dock .arena-wrap { padding: 0; }
+.fl-dock .arena-table-wrap { overflow-x: auto; }
+.fl-dock .arena-table thead th, .fl-dock .arena-table td { padding-left: 8px; padding-right: 8px; }
+.fl-dock .arena-table td { padding-top: 10px; padding-bottom: 10px; }
+.fl-dock .arena-h1 { font-size: 20px; }
+
+/* panels over the room: the listing form and the first-visit entrance */
+.fl-modal-back, .fl-entry {
+  position: absolute; inset: 0; z-index: 12; display: grid; place-items: center; padding: 16px;
+  background: oklch(10% 0.01 260 / 0.72); backdrop-filter: blur(5px);
+}
+.fl-entry { z-index: 14; background: oklch(10% 0.01 260 / 0.8); overflow: auto; }
+.fl-modal, .fl-entry-card {
+  width: min(480px, 100%); max-height: 100%; overflow: auto; padding: 22px;
+  background: var(--ar-surface); border: 1px solid var(--ar-border); border-radius: var(--ar-radius);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.fl-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.fl-modal-head h2 { margin: 0; font-size: 18px; }
+.fl-entry-card { width: min(540px, 100%); padding: 28px; }
+.fl-entry-title { margin: 4px 0 10px; font-size: 30px; font-weight: 800; letter-spacing: -0.3px; }
+.fl-entry-lede { margin: 0 0 16px; color: var(--ar-text-dim); font-size: 14px; line-height: 1.5; max-width: 52ch; }
+.fl-entry-steps { margin: 0 0 20px; padding-left: 20px; display: grid; gap: 10px; color: var(--ar-text-dim); font-size: 13px; line-height: 1.45; }
+.fl-entry-steps b { color: var(--ar-text); }
+.fl-entry-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.fl-entry-fine { margin: 16px 0 0; color: var(--ar-text-faint); font-size: 12px; }
+.fl-entry-fine a { color: var(--ar-gold); }
+
+@media (max-width: 820px) {
+  .fl-dock { left: 0; right: 0; top: auto; bottom: 0; width: 100%; max-height: 58%; border-radius: var(--ar-radius) var(--ar-radius) 0 0; border-bottom: 0; }
+  .fl-dock.fl-peek { max-height: none; }
+  .fl-shell .arena-topbar { padding: 8px 12px; gap: 8px; flex-wrap: wrap; }
+  .fl-shell .arena-brand-tag { display: none; }
+  .fl-shell .arena-brand-mark { width: 28px; height: 28px; font-size: 14px; }
+  .fl-shell .arena-nav { order: 3; width: 100%; justify-content: center; }
+  .fl-shell .arena-nav a, .fl-shell .arena-nav span { padding: 5px 9px; }
+  .fl-seated .arena-nav { display: none; }
+  .fl-entry-card { padding: 20px; }
+  .fl-entry-title { font-size: 24px; }
+}
+
+@media (pointer: coarse) {
+  .fl-joy { display: block; }
+  .fl-act { display: block; }
+  .fl-emotes { left: auto; right: 14px; bottom: 112px; align-items: flex-end; }
+  .fl-emote-pop { flex-direction: column; align-items: flex-end; }
+  .fl-emote-btn, .fl-emote-pop button { min-height: 40px; }
+  .fl-prompt { bottom: 136px; }
+}
+
+@media (prefers-reduced-motion: reduce) { .fl-dot { animation: none; } }

@@ -25,6 +25,7 @@ const Lobby = lazy(() => import('./lobby/Lobby').then((m) => ({ default: m.Lobby
 const WhoSold = lazy(() => import('./sold/WhoSold').then((m) => ({ default: m.WhoSold })))
 const SoldLanding = lazy(() => import('./sold/SoldLanding').then((m) => ({ default: m.SoldLanding })))
 const ArenaHome = lazy(() => import('./sold/arena/ArenaHome').then((m) => ({ default: m.ArenaHome })))
+const ArenaFloor = lazy(() => import('./floor/ArenaFloor').then((m) => ({ default: m.ArenaFloor })))
 const ArenaFlow = lazy(() => import('./sold/arena/ArenaFlow').then((m) => ({ default: m.ArenaFlow })))
 const Portfolio = lazy(() => import('./sold/arena/Portfolio').then((m) => ({ default: m.Portfolio })))
 const Leaderboard = lazy(() => import('./sold/arena/Leaderboard').then((m) => ({ default: m.Leaderboard })))
@@ -44,7 +45,7 @@ export default function App() {
         <PresenceBeacon />
         <Suspense fallback={<RouteFallback />}>
           <Routes>
-            <Route path="/" element={<ArenaHome />} />
+            <Route path="/" element={<ArenaFloor />} />
             <Route path="/choose" element={<PathChooser />} />
             <Route path="/who-rugged" element={<Landing />} />
             <Route path="/menu" element={<Menu />} />
@@ -57,7 +58,8 @@ export default function App() {
             <Route path="/lobby" element={<Lobby />} />
             <Route path="/sold" element={<SoldLanding />} />
             <Route path="/sold/play" element={<WhoSold />} />
-            <Route path="/arena" element={<ArenaHome />} />
+            <Route path="/arena" element={<ArenaFloor />} />
+            <Route path="/arena/map" element={<ArenaHome />} />
             <Route path="/arena/:arenaId" element={<ArenaFlow />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/leaderboard" element={<Leaderboard />} />

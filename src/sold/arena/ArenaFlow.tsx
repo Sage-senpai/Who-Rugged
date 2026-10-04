@@ -13,22 +13,73 @@ import { ComingSoon } from './ComingSoon'
 import { Thesis } from '../dmp/Thesis'
 import './arena.css'
 
-export function ArenaFlow() {
-  const { arenaId } = useParams<{ arenaId: string }>()
-  const a = useArena(arenaId)
-  const [usdPrice, setUsdPrice] = useState<number | null>(null)
+export type ArenaState = ReturnType<typeof useArena>
 
+/** Spot price for the arena's token, shared by the full page and the 3D dock. */
+export function useUsdPrice(a: ArenaState): number | null {
+  const [usdPrice, setUsdPrice] = useState<number | null>(null)
   useEffect(() => {
     if (!a.isLive || !a.arena) return
     let active = true
     void getTokenPrice(a.arena.id).then((p) => { if (active && p) setUsdPrice(p.usd) })
     return () => { active = false }
   }, [a.isLive, a.arena])
+  return usdPrice
+}
 
-  const myInPlay = useMemo(() => {
+/** Sum of the connected predictor's staked positions in this arena. */
+export function useInPlay(a: ArenaState): number {
+  return useMemo(() => {
     const all = [...a.markets.positions, ...a.markets.binaryPositions, ...a.markets.magnitudePositions]
     return all.reduce((s, p) => s + p.stake, 0)
   }, [a.markets.positions, a.markets.binaryPositions, a.markets.magnitudePositions])
+}
+
+/** The scene switch for a live arena. Rendered by the /arena/:id page and by
+    the seated dock on the 3D floor, so both run the exact same flow. */
+export function ArenaScenes({ a, usdPrice }: { a: ArenaState; usdPrice: number | null }) {
+  if (!a.arena) return null
+  return (
+    <>
+      {a.scene === 'scan' && <ScanHolders arena={a.arena} markets={a.markets} usdPrice={usdPrice} onSelect={a.selectHolder} />}
+      {a.scene === 'holder' && a.holder && (
+        <SelectHolder holder={a.holder} usdPrice={usdPrice} totalSupply={a.arena.totalSupply} arenaId={a.arena.id}
+          onBack={a.back} onPredict={a.openThesis} />
+      )}
+      {a.scene === 'thesis' && a.holder && (
+        <Thesis
+          holder={a.markets.markets.find((m) => m.wallet === a.holder!.wallet) ?? a.holder}
+          arena={a.arena}
+          usdPrice={usdPrice}
+          onBack={a.back}
+          onClassic={a.openMarketTypePicker}
+          onContinue={a.submitRead}
+        />
+      )}
+      {a.scene === 'marketType' && a.holder && (
+        <SelectMarketType holder={a.holder} onBack={a.back} onSelect={a.selectMarketType} />
+      )}
+      {a.scene === 'predict' && a.holder && a.marketKind === 'binary' && (
+        <PredictBinary holder={a.holder} live={a.markets.live} onBack={a.back} onChoose={a.selectOutcome} />
+      )}
+      {a.scene === 'predict' && a.holder && a.marketKind === 'magnitude' && (
+        <PredictMagnitude holder={a.holder} live={a.markets.live} onBack={a.back} onChoose={a.selectOutcome} />
+      )}
+      {a.scene === 'review' && a.holder && a.outcome && (
+        <ReviewCommit holder={a.holder} marketKind={a.marketKind!} outcome={a.outcome} stake={a.stake}
+          committing={a.committing} commitError={a.commitError} readProbYes={a.read?.probYes}
+          onBack={a.back} onCommit={a.commit} />
+      )}
+      {a.scene === 'locked' && <ComingSoon onDone={a.reset} />}
+    </>
+  )
+}
+
+export function ArenaFlow() {
+  const { arenaId } = useParams<{ arenaId: string }>()
+  const a = useArena(arenaId)
+  const usdPrice = useUsdPrice(a)
+  const myInPlay = useInPlay(a)
 
   if (!a.arena) {
     return (
@@ -62,36 +113,7 @@ export function ArenaFlow() {
     <div className="arena-shell">
       <ArenaTopbar inPlay={myInPlay} />
       <div className="arena-wrap arena-page">
-        {a.scene === 'scan' && <ScanHolders arena={a.arena} markets={a.markets} usdPrice={usdPrice} onSelect={a.selectHolder} />}
-        {a.scene === 'holder' && a.holder && (
-          <SelectHolder holder={a.holder} usdPrice={usdPrice} totalSupply={a.arena.totalSupply} arenaId={a.arena.id}
-            onBack={a.back} onPredict={a.openThesis} />
-        )}
-        {a.scene === 'thesis' && a.holder && (
-          <Thesis
-            holder={a.markets.markets.find((m) => m.wallet === a.holder!.wallet) ?? a.holder}
-            arena={a.arena}
-            usdPrice={usdPrice}
-            onBack={a.back}
-            onClassic={a.openMarketTypePicker}
-            onContinue={a.submitRead}
-          />
-        )}
-        {a.scene === 'marketType' && a.holder && (
-          <SelectMarketType holder={a.holder} onBack={a.back} onSelect={a.selectMarketType} />
-        )}
-        {a.scene === 'predict' && a.holder && a.marketKind === 'binary' && (
-          <PredictBinary holder={a.holder} live={a.markets.live} onBack={a.back} onChoose={a.selectOutcome} />
-        )}
-        {a.scene === 'predict' && a.holder && a.marketKind === 'magnitude' && (
-          <PredictMagnitude holder={a.holder} live={a.markets.live} onBack={a.back} onChoose={a.selectOutcome} />
-        )}
-        {a.scene === 'review' && a.holder && a.outcome && (
-          <ReviewCommit holder={a.holder} marketKind={a.marketKind!} outcome={a.outcome} stake={a.stake}
-            committing={a.committing} commitError={a.commitError} readProbYes={a.read?.probYes}
-            onBack={a.back} onCommit={a.commit} />
-        )}
-        {a.scene === 'locked' && <ComingSoon onDone={a.reset} />}
+        <ArenaScenes a={a} usdPrice={usdPrice} />
       </div>
     </div>
   )
