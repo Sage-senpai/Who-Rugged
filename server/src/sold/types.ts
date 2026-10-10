@@ -41,6 +41,14 @@ export interface PredictorScore {
   correct: number
   total: number
   pointsDelta: number
+  /** Brier-score calibration accumulator: Σ(statedProbabilityYes - outcome)²,
+      only incremented for binary positions that carried a stated probability
+      (Read-screen bets). Average Brier score = brierSum / brierCount — lower
+      is better, 0 is perfect, 0.25 is the no-skill baseline (always guessing
+      50%). Optional because scores settled before this field existed won't
+      have it. */
+  brierSum?: number
+  brierCount?: number
 }
 
 export interface RegisteredHolder {
@@ -136,6 +144,11 @@ export interface BucketHolderMarket {
   /** Displayed pool per side for the binary (yes/no sell) market. */
   binaryPools?: BinaryPools
   realBinaryPools?: BinaryPools
+  /** Rate of change of realBinaryPools per side, in points/hour, refreshed
+      each sample() pass — the PDF's "market traction": which side is
+      gaining conviction fastest, not just which has the bigger pool right
+      now. Absent until two samples have landed. */
+  binaryTraction?: BinaryPools
   /** Displayed pool per band for the rug-by-% magnitude market. */
   magnitudePools?: MagnitudePools
   realMagnitudePools?: MagnitudePools

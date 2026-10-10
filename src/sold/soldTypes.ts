@@ -42,6 +42,11 @@ export interface PredictorScore {
   total: number
   /** Net $GG delta: parimutuel for batches, 2× stake for individual. */
   pointsDelta: number
+  /** Brier-score calibration accumulator (Σ(statedProbability - outcome)²),
+      only incremented for Read-screen bets that carried a stated probability.
+      Average = brierSum / brierCount, lower is better, 0.25 = no-skill baseline. */
+  brierSum?: number
+  brierCount?: number
 }
 
 export interface RegisteredHolder {

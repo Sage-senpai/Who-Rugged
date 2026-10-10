@@ -83,7 +83,7 @@ export function Thesis({ holder, arena, usdPrice, onBack, onClassic, onContinue 
 
   const buys = activity?.filter((e) => e.kind === 'buy').length
   const sells = activity?.filter((e) => e.kind === 'sell').length
-  const transfers = activity?.filter((e) => e.kind === 'unknown').length
+  const transfers = activity?.filter((e) => e.kind === 'unknown' || e.kind === 'transfer').length
   const earliest = activity?.length ? Math.min(...activity.map((e) => e.at)) : null
   const supplyPct = arena.totalSupply ? (holder.balanceAtSnapshot / arena.totalSupply) * 100 : null
   const value = usdPrice != null ? holder.balanceAtSnapshot * usdPrice : null
@@ -317,6 +317,15 @@ export function Thesis({ holder, arena, usdPrice, onBack, onClassic, onContinue 
                 <span className="dmp-sig-lab"><i className="dmp-dot" />MARKET</span>
                 <span className="dmp-sig-val">{marketP != null ? pct(marketP) : 'n/a'}</span>
                 <span className="dmp-sig-sub">{marketP != null ? 'sell, real stakes' : 'no stakes yet'}</span>
+                {holder.binaryTraction && (
+                  <span className="dmp-sig-sub" style={{ opacity: 0.6 }}>
+                    {holder.binaryTraction.yes > holder.binaryTraction.no
+                      ? '↑ sell side gaining'
+                      : holder.binaryTraction.yes < holder.binaryTraction.no
+                        ? '↓ hold side gaining'
+                        : '→ flat'}
+                  </span>
+                )}
               </div>
               <div className={`dmp-sig${revealed ? '' : ' dmp-sig-sealed'}`} style={{ ['--c' as string]: 'var(--dmp-model)' }}>
                 <span className="dmp-sig-lab"><i className="dmp-dot" />MODEL</span>

@@ -5,6 +5,18 @@ import { lookupHolder, TRACKED_WALLETS } from './holderRegistry'
 import type { TrackedHolder } from './types'
 
 
+/** Known cross-chain bridge program IDs. Best-effort/non-exhaustive: a program this
+ *  list misses just falls through to the existing delta-based buy/sell/unknown read
+ *  (unchanged from before), so gaps here cost precision, never correctness. */
+const BRIDGE_PROGRAM_IDS = new Set([
+  'wormDTUJ6AWPNvk59vGQbDvGJmqbDTdgWgAqcLBCgUb', // Wormhole / Portal token bridge
+])
+
+const TOKEN_PROGRAM_IDS = new Set([
+  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', // SPL Token
+  'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb', // SPL Token-2022
+])
+
 export interface HolderBalance {
   wallet: string
   balance: number
@@ -204,11 +216,19 @@ export class SolanaOracle {
 
   /** Best-effort recent SPL-transfer activity for one wallet on this mint.
    *  Reads real transaction history via getSignaturesForAddress + getParsedTransaction,
-   *  classifying each by the wallet's token-balance delta: inflow = 'buy', outflow =
-   *  'sell', no owner delta found = 'unknown'. This is NOT DEX-swap-aware — it can't
-   *  distinguish a market buy from a plain incoming transfer — so callers must present
-   *  it as a best-effort read, never as certain intent. Never fabricates rows: returns
-   *  [] (not fake data) when the mint isn't configured or nothing comes back. */
+   *  then classifies each event in two steps:
+   *    1. Inspect the transaction's top-level instructions for program IDs we can
+   *       actually identify — an SPL Token burn instruction -> 'burn', a known bridge
+   *       program -> 'bridge', an instruction set that's nothing but plain SPL
+   *       transfers (no DEX/AMM program involved) -> 'transfer'. This is the fix for
+   *       "a raw transfer must not automatically be interpreted as a sell": a plain
+   *       wallet-to-wallet transfer no longer gets labeled buy/sell.
+   *    2. Anything else falls back to the wallet's token-balance delta: inflow =
+   *       'buy', outflow = 'sell', no delta = 'unknown'. This remains NOT fully
+   *       DEX-swap-aware for programs outside DEX_PROGRAM_IDS — callers must still
+   *       present it as best-effort, never as certain intent.
+   *  Never fabricates rows: returns [] (not fake data) when the mint isn't configured
+   *  or nothing comes back. */
   async fetchRecentActivity(wallet: string, limit = 10): Promise<ActivityEvent[]> {
     if (!this.mint) return []
     const cappedLimit = Math.max(1, Math.min(20, limit))
@@ -220,9 +240,11 @@ export class SolanaOracle {
     if (!sigs?.length) return []
 
     type TokenBalance = { owner?: string; mint: string; uiTokenAmount: { uiAmount: number | null } }
+    type ParsedIx = { programId: string; parsed?: { type: string } }
     type ParsedTx = {
       blockTime: number | null
       meta: { preTokenBalances?: TokenBalance[]; postTokenBalances?: TokenBalance[] } | null
+      transaction?: { message: { instructions: ParsedIx[] } }
     }
 
     const events = await Promise.all(
@@ -238,10 +260,30 @@ export class SolanaOracle {
         const after = post?.uiTokenAmount.uiAmount ?? 0
         const delta = after - before
         if (!pre && !post) return null // this tx didn't touch the wallet's balance for this mint
+
+        const ixs = tx.transaction?.message.instructions ?? []
+        const hasBurn = ixs.some(
+          (ix) => TOKEN_PROGRAM_IDS.has(ix.programId) && (ix.parsed?.type === 'burn' || ix.parsed?.type === 'burnChecked'),
+        )
+        const hasBridge = ixs.some((ix) => BRIDGE_PROGRAM_IDS.has(ix.programId))
+        const isPlainTransferOnly =
+          ixs.length > 0 &&
+          ixs.every(
+            (ix) =>
+              TOKEN_PROGRAM_IDS.has(ix.programId) &&
+              (ix.parsed?.type === 'transfer' || ix.parsed?.type === 'transferChecked'),
+          )
+
+        let kind: ActivityEvent['kind']
+        if (hasBurn) kind = 'burn'
+        else if (hasBridge) kind = 'bridge'
+        else if (isPlainTransferOnly) kind = 'transfer'
+        else kind = delta > 0 ? 'buy' : delta < 0 ? 'sell' : 'unknown'
+
         return {
           signature: s.signature,
           at: (tx.blockTime ?? s.blockTime ?? 0) * 1000,
-          kind: delta > 0 ? 'buy' : delta < 0 ? 'sell' : 'unknown',
+          kind,
           amount: Math.abs(delta),
         }
       }),
@@ -253,6 +295,6 @@ export class SolanaOracle {
 export interface ActivityEvent {
   signature: string
   at: number
-  kind: 'buy' | 'sell' | 'unknown'
+  kind: 'buy' | 'sell' | 'transfer' | 'burn' | 'bridge' | 'unknown'
   amount: number
 }

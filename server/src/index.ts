@@ -9,7 +9,8 @@
    0G Compute uses the OpenAI-compatible direct API (OG_COMPUTE_API_URL +
    OG_COMPUTE_API_KEY), so it runs in the Worker with a plain fetch. */
 import { DurableObject } from 'cloudflare:workers'
-import { SolanaOracle } from './sold/SolanaOracle'
+import { SolanaOracle, type ActivityEvent } from './sold/SolanaOracle'
+import { emptyProfile, mergeActivity, deriveFeatures, type WalletProfile } from './sold/walletProfile'
 import { BscOracle } from './sold/BscOracle'
 import { ZashClient } from './sold/ZashClient'
 import { TRACKED_WALLETS, lookupHolder } from './sold/holderRegistry'
@@ -480,6 +481,18 @@ export class Directory extends DurableObject<Env> {
     rate[ip] = [...mine, Date.now()]
     await this.ctx.storage.put({ community: all, communityRate: rate })
     return { ok: true, table: entry, created: true }
+  }
+
+  // ── wallet intelligence (persisted, cross-market profile) ──
+  async walletProfileGet(chain: string, wallet: string): Promise<WalletProfile | null> {
+    return (await this.ctx.storage.get<WalletProfile>(`wallet:${chain}:${wallet}`)) ?? null
+  }
+  async walletProfileTouch(chain: string, wallet: string, events: ActivityEvent[]): Promise<WalletProfile> {
+    const key = `wallet:${chain}:${wallet}`
+    const existing = (await this.ctx.storage.get<WalletProfile>(key)) ?? emptyProfile(chain, wallet)
+    const merged = mergeActivity(existing, events)
+    await this.ctx.storage.put(key, merged)
+    return merged
   }
 
   // ── friends ──
@@ -973,6 +986,22 @@ export default {
         const mint = arenaSource ? arenaSource.mint : (env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
         const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, mint)
         return json(await oracle.fetchRecentActivity(wallet, limit))
+      }
+
+      // Persisted wallet intelligence: fetches fresh activity (same read as
+      // /sold/activity), merges it into the wallet's durable cross-market
+      // profile, and returns both the accumulated profile and the derived
+      // behavioral features. Solana-only today, same honest limitation as
+      // /sold/activity above.
+      if (url.pathname === '/sold/wallet/intelligence' && request.method === 'GET') {
+        const wallet = url.searchParams.get('wallet') ?? ''
+        if (wallet.length < 32 || wallet.length > 44) return json({ error: 'invalid-wallet' }, 400)
+        if (arenaSource && arenaSource.kind !== 'solana') return json({ error: 'unsupported-chain' }, 400)
+        const mint = arenaSource ? arenaSource.mint : (env.ANSEM_MINT ?? ANSEM_MINT_DEFAULT)
+        const oracle = new SolanaOracle(env.ALCHEMY_API_KEY, mint)
+        const events = await oracle.fetchRecentActivity(wallet, 20)
+        const profile = await env.DIRECTORY.getByName('global').walletProfileTouch('solana', wallet, events)
+        return json({ profile, features: deriveFeatures(profile) })
       }
 
       if (url.pathname === '/sold/price' && request.method === 'GET') {
