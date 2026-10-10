@@ -31,6 +31,15 @@ export function PredictorRankings({ scores, myAddress }: Props) {
           <span className="sold-rank-delta" style={{ fontSize: '0.68rem', opacity: 0.45, marginRight: '0.25rem' }}>
             {s.correct}/{s.total}
           </span>
+          {!!s.brierCount && (
+            <span
+              className="sold-rank-delta"
+              style={{ fontSize: '0.68rem', opacity: 0.45, marginRight: '0.25rem' }}
+              title="Brier score: how well-calibrated your stated probabilities were. 0 = perfect, 0.25 = no-skill baseline, lower is better."
+            >
+              BS {((s.brierSum ?? 0) / s.brierCount).toFixed(2)}
+            </span>
+          )}
           <span className={`sold-rank-delta ${s.pointsDelta >= 0 ? 'pos' : 'neg'}`}>
             {s.pointsDelta >= 0 ? '+' : ''}{s.pointsDelta}
           </span>

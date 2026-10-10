@@ -173,6 +173,10 @@ interface MarketState {
   /** Cached "i" icon signal (server/src/sold/walletAnalytics.ts). Only
       computed for Solana-sourced arenas — see computeAnalytics(). */
   analytics?: ArenaAnalytics
+  /** Previous sample's real binary pool per wallet, for deriving
+      BucketHolderMarket.binaryTraction in sample() below. Internal
+      bookkeeping only — never read by the frontend. */
+  prevBinaryPools?: Record<string, { at: number; pools: BinaryPools }>
 }
 
 export class BucketMarket extends DurableObject<BucketEnv> {
@@ -423,6 +427,32 @@ export class BucketMarket extends DurableObject<BucketEnv> {
         h.resolvedBucket = bucketForElapsed(elapsedHours)
       }
     }
+    await this.updateTraction(state, pending)
+  }
+
+  /** Market traction (PDF "Market Traction" section): rate of change of each
+      holder's real binary pool since the previous sample, in points/hour —
+      lets the UI show which side is gaining conviction fastest, not just
+      which side currently has the bigger pool. Computed from REAL stakes
+      only (never seed liquidity), on the same cadence as balance sampling
+      so it reflects a meaningful window, not noise between page polls. */
+  private async updateTraction(state: MarketState, pending: BucketHolderMarket[]): Promise<void> {
+    const now = Date.now()
+    const binaryPositions = await this.binaryPositions()
+    const prev = state.prevBinaryPools ?? {}
+    for (const h of pending) {
+      const current = realBinaryPoolsFor(binaryPositions, h.wallet)
+      const last = prev[h.wallet]
+      if (last && now > last.at) {
+        const hoursElapsed = (now - last.at) / HOUR
+        h.binaryTraction = {
+          yes: (current.yes - last.pools.yes) / hoursElapsed,
+          no: (current.no - last.pools.no) / hoursElapsed,
+        }
+      }
+      prev[h.wallet] = { at: now, pools: current }
+    }
+    state.prevBinaryPools = prev
   }
 
   /** Settle every holder parimutuel from REAL stakes only, then score. */
@@ -477,11 +507,21 @@ export class BucketMarket extends DurableObject<BucketEnv> {
     // binary — resolvedBinary is a pure function of resolvedBucket, no new timing logic needed
     for (const h of state.holders) {
       const resolvedBinary: BinarySide = h.resolvedBucket === 'holds' ? 'no' : 'yes'
+      const outcome = resolvedBinary === 'yes' ? 1 : 0
       const hp = binaryPositions.filter((p) => p.wallet === h.wallet)
       const realWinner = hp.filter((p) => p.side === resolvedBinary).reduce((s, p) => s + p.stake, 0)
       const realTotal = hp.reduce((s, p) => s + p.stake, 0)
       const realLoser = realTotal - realWinner
       settleDimension(hp, (p) => p.side === resolvedBinary, () => realWinner, () => realLoser)
+      // Brier-score calibration: only for positions that carried a stated
+      // probabilityYes (Read-screen bets) — a bare yes/no vote has no stated
+      // probability to score against.
+      for (const p of hp) {
+        if (p.probabilityYes == null) continue
+        const sc = (scoreMap[p.predictor] ??= { predictor: p.predictor, correct: 0, total: 0, pointsDelta: 0, brierSum: 0, brierCount: 0 })
+        sc.brierSum = (sc.brierSum ?? 0) + (p.probabilityYes - outcome) ** 2
+        sc.brierCount = (sc.brierCount ?? 0) + 1
+      }
     }
 
     // magnitude — resolvedMagnitudeBand derived from the same real oracle-read dropRatio

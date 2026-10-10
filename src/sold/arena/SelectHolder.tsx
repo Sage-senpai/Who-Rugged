@@ -47,7 +47,7 @@ export function SelectHolder({ holder, usdPrice, totalSupply, arenaId, onBack, o
   const value = usdPrice != null ? holder.balanceAtSnapshot * usdPrice : null
   const buys = activity?.filter((e) => e.kind === 'buy').length ?? null
   const sells = activity?.filter((e) => e.kind === 'sell').length ?? null
-  const transfers = activity?.filter((e) => e.kind === 'unknown').length ?? null
+  const transfers = activity?.filter((e) => e.kind === 'unknown' || e.kind === 'transfer').length ?? null
   const earliest = activity?.length ? activity[activity.length - 1].at : null
 
   return (

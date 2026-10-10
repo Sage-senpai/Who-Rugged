@@ -18,10 +18,12 @@ function merge(perArena: PredictorScore[][]): PredictorScore[] {
   const byPredictor: Record<string, PredictorScore> = {}
   for (const scores of perArena) {
     for (const s of scores) {
-      const acc = (byPredictor[s.predictor] ??= { predictor: s.predictor, correct: 0, total: 0, pointsDelta: 0 })
+      const acc = (byPredictor[s.predictor] ??= { predictor: s.predictor, correct: 0, total: 0, pointsDelta: 0, brierSum: 0, brierCount: 0 })
       acc.correct += s.correct
       acc.total += s.total
       acc.pointsDelta += s.pointsDelta
+      acc.brierSum = (acc.brierSum ?? 0) + (s.brierSum ?? 0)
+      acc.brierCount = (acc.brierCount ?? 0) + (s.brierCount ?? 0)
     }
   }
   return Object.values(byPredictor)
@@ -71,6 +73,7 @@ export function Leaderboard() {
                   <th>RANK</th>
                   <th>PREDICTOR</th>
                   <th>ACCURACY</th>
+                  <th title="Brier score: how well-calibrated stated probabilities were. 0 = perfect, 0.25 = no-skill baseline.">CALIBRATION</th>
                   <th>POINTS</th>
                 </tr>
               </thead>
@@ -83,6 +86,7 @@ export function Leaderboard() {
                       <td className="arena-rank">#{String(i + 1).padStart(2, '0')}</td>
                       <td>{shortAddr(r.predictor)}{isMe ? ' (you)' : ''}</td>
                       <td>{accuracy.toFixed(0)}% ({r.correct}/{r.total})</td>
+                      <td>{r.brierCount ? ((r.brierSum ?? 0) / r.brierCount).toFixed(2) : '—'}</td>
                       <td className={r.pointsDelta >= 0 ? 'arena-pnl-up' : 'arena-pnl-down'}>
                         {r.pointsDelta >= 0 ? '+' : ''}{r.pointsDelta.toLocaleString()}
                       </td>

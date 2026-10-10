@@ -16,6 +16,10 @@ export interface HolderMarket {
   /** Displayed pool per side for the binary (will-they-sell) market. */
   binaryPools?: BinaryPools
   realBinaryPools?: BinaryPools
+  /** Rate of change of realBinaryPools per side, in points/hour, refreshed
+      each server sample — which side is gaining conviction fastest. Absent
+      until two samples have landed. */
+  binaryTraction?: BinaryPools
   /** Displayed pool per band for the rug-by-% magnitude market. */
   magnitudePools?: MagnitudePools
   realMagnitudePools?: MagnitudePools

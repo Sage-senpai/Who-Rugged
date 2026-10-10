@@ -141,7 +141,7 @@ export const getMarketLeaderboard = (arena?: string) =>
 export interface ActivityEvent {
   signature: string
   at: number
-  kind: 'buy' | 'sell' | 'unknown'
+  kind: 'buy' | 'sell' | 'transfer' | 'burn' | 'bridge' | 'unknown'
   amount: number
 }
 
