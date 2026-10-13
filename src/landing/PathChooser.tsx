@@ -87,7 +87,7 @@ export function PathChooser() {
       </div>
 
       <div className="chooser-foot">
-        ◉ ONE UNIVERSE · TWO GAMES · $ANSEM ORACLE · 0G NETWORK ◉
+        ◉ ONE UNIVERSE · TWO GAMES · SOLANA + 0G ◉
       </div>
     </main>
   )
