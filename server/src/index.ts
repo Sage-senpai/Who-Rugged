@@ -10,6 +10,7 @@
    OG_COMPUTE_API_KEY), so it runs in the Worker with a plain fetch. */
 import { DurableObject } from 'cloudflare:workers'
 import { SolanaOracle, type ActivityEvent } from './sold/SolanaOracle'
+import { PantaClient } from './sold/PantaClient'
 import { emptyProfile, mergeActivity, deriveFeatures, type WalletProfile } from './sold/walletProfile'
 import { BscOracle } from './sold/BscOracle'
 import { ZashClient } from './sold/ZashClient'
@@ -57,6 +58,12 @@ export interface Env {
   SOLD_SELL_THRESHOLD?: string
   SOLD_PREDICTION_WINDOW_HOURS?: string
   SOLD_MIN_REG_BALANCE?: string
+  /** Panta (docs.panta.market) API key for this platform's own account.
+      Never a per-user credential — Panta is non-custodial, so this key
+      only lets the Worker quote/build/report on behalf of whichever
+      wallet is actually signing. Absent = every /sold/panta/* route
+      returns NO_API_KEY rather than silently no-opping. */
+  PANTA_API_KEY?: string
 }
 
 interface RoomInfo { code: string; hostName: string; players: number; max: number; hasSpace: boolean; updatedAt: number }
@@ -1166,6 +1173,114 @@ export default {
           return { wallet: b.wallet, windowId: win.windowId, sold, balanceBefore: before, balanceAfter: b.balance, confirmedAt: Date.now() }
         })
         return json(await pool.resolveWindow(resolutions))
+      }
+
+      // ── Panta (docs.panta.market): binary YES/NO USDC markets on Solana.
+      // Non-custodial passthrough — this Worker holds one platform-level
+      // PANTA_API_KEY and proxies quote/build/submit/position/claim calls;
+      // the end user's own wallet signs every transaction client-side, this
+      // never touches a private key. See PantaClient.ts for the full
+      // custody-model writeup.
+      if (url.pathname.startsWith('/sold/panta/')) {
+        const panta = new PantaClient(env.PANTA_API_KEY)
+        const pantaJson = <T>(r: { ok: true; data: T } | { ok: false; status: number; error: unknown }) =>
+          r.ok ? json(r.data) : json({ error: r.error }, r.status || 502)
+
+        if (url.pathname === '/sold/panta/markets' && request.method === 'GET') {
+          return pantaJson(await panta.listMarkets({
+            category: url.searchParams.get('category') ?? undefined,
+            phase: url.searchParams.get('phase') ?? undefined,
+            createdBy: url.searchParams.get('createdBy') ?? undefined,
+            page: url.searchParams.get('page') ? parseInt(url.searchParams.get('page')!) : undefined,
+          }))
+        }
+
+        const marketGet = url.pathname.match(/^\/sold\/panta\/markets\/([^/]+)$/)
+        if (marketGet && request.method === 'GET') {
+          return pantaJson(await panta.getMarket(marketGet[1]))
+        }
+
+        if (url.pathname === '/sold/panta/markets/create/quote' && request.method === 'POST') {
+          let b: Parameters<PantaClient['quoteCreateMarket']>[0]
+          try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+          if (!b?.question || !b.rule || !b.startTime || !b.category || !b.imageUrl) {
+            return json({ error: 'missing-fields' }, 400)
+          }
+          return pantaJson(await panta.quoteCreateMarket(b))
+        }
+
+        if (url.pathname === '/sold/panta/markets/create/build' && request.method === 'POST') {
+          let b: { createId?: string }
+          try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+          if (!b.createId) return json({ error: 'missing-fields' }, 400)
+          return pantaJson(await panta.buildCreateMarket(b.createId))
+        }
+
+        if (url.pathname === '/sold/panta/markets/register' && request.method === 'POST') {
+          let b: { createId?: string; signature?: string }
+          try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+          if (!b.createId || !b.signature) return json({ error: 'missing-fields' }, 400)
+          return pantaJson(await panta.registerMarket(b.createId, b.signature))
+        }
+
+        if (url.pathname === '/sold/panta/orders/quote' && request.method === 'POST') {
+          let b: Parameters<PantaClient['quotePrimaryBuy']>[0]
+          try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+          if (!b?.marketId || (b.side !== 'yes' && b.side !== 'no') || !b.amount) {
+            return json({ error: 'missing-fields' }, 400)
+          }
+          return pantaJson(await panta.quotePrimaryBuy(b))
+        }
+
+        if (url.pathname === '/sold/panta/orders/build' && request.method === 'POST') {
+          let b: { quoteId?: string }
+          try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+          if (!b.quoteId) return json({ error: 'missing-fields' }, 400)
+          return pantaJson(await panta.buildPrimaryBuy(b.quoteId))
+        }
+
+        if (url.pathname === '/sold/panta/orders/submit' && request.method === 'POST') {
+          let b: { orderId?: string; signature?: string }
+          try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+          if (!b.orderId || !b.signature) return json({ error: 'missing-fields' }, 400)
+          return pantaJson(await panta.submitPrimaryBuy(b.orderId, b.signature))
+        }
+
+        if (url.pathname === '/sold/panta/orders/verify' && request.method === 'GET') {
+          const orderId = url.searchParams.get('orderId')
+          if (!orderId) return json({ error: 'missing-fields' }, 400)
+          return pantaJson(await panta.verifyPrimaryBuy(orderId))
+        }
+
+        if (url.pathname === '/sold/panta/positions' && request.method === 'GET') {
+          const wallet = url.searchParams.get('wallet')
+          if (!wallet) return json({ error: 'missing-fields' }, 400)
+          return pantaJson(await panta.getPositions(wallet))
+        }
+
+        if (url.pathname === '/sold/panta/claims/build' && request.method === 'POST') {
+          let b: { wallet?: string; marketId?: string; kind?: 'win' | 'creator-fees' }
+          try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+          if (!b.wallet || !b.marketId) return json({ error: 'missing-fields' }, 400)
+          return pantaJson(
+            b.kind === 'creator-fees'
+              ? await panta.buildCreatorFeeClaim(b.wallet, b.marketId)
+              : await panta.buildWinClaim(b.wallet, b.marketId),
+          )
+        }
+
+        if (url.pathname === '/sold/panta/trades/report' && request.method === 'POST') {
+          let b: { signature?: string; kind?: 'buy' | 'claim'; userId?: string }
+          try { b = (await request.json()) as typeof b } catch { return json({ error: 'bad-json' }, 400) }
+          if (!b.signature || (b.kind !== 'buy' && b.kind !== 'claim')) return json({ error: 'missing-fields' }, 400)
+          return pantaJson(await panta.reportTrade(b.signature, b.kind, b.userId))
+        }
+
+        if (url.pathname === '/sold/panta/health' && request.method === 'GET') {
+          return pantaJson(await panta.whoami())
+        }
+
+        return json({ error: 'not-found' }, 404)
       }
 
       return json({ error: 'not-found' }, 404)
